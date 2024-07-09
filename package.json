@@ -1,7 +1,8 @@
 {
   "name": "zakaz_bot",
   "version": "1.0.0",
-  "main": "server.js",
+  "main": "dist/server.js",
+  "type": "module",
   "scripts": {
     "build": "tsc",
     "start": "npm run build && node dist/server.js"

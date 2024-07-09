@@ -6,11 +6,13 @@ COPY package*.json ./
 
 RUN npm install
 
-RUN npm install -g typescript
-
 COPY . .
 
-RUN npm run build
+RUN npm install -g mongodb-tools
+RUN npm install typescript --save-dev
+RUN npm install dotenv mongoose @types/dotenv @types/mongoose --save-dev
+
+RUN npx tsc
 
 EXPOSE 3000
 

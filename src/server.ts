@@ -4,8 +4,11 @@ import TelegramBot, { Message } from "node-telegram-bot-api";
 import fs from "fs";
 import path from "path";
 import mongoose, { Schema, Document } from "mongoose";
+import dotenv from "dotenv";
+import dbConnectionString from "./dbConfig.js";
 
-// Mongoose schema and model for Lessons
+dotenv.config();
+
 interface ILesson extends Document {
   playlist: string;
   lessonNumber: number;
@@ -37,16 +40,19 @@ const UserSchema: Schema = new Schema({
 const User = mongoose.model<IUser>("User", UserSchema);
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-const TOKEN = "7201731124:AAGkzKWQhuiKKMuG-W8U7p9jwNkUamakGKo";
+const PORT = process.env.PORT || "3000";
+const TOKEN = process.env.BOT_TOKEN || "6900560465:AAFZI94ICbWibR09mBegOL0OIgnN1gcSb_8";
+
+console.log("Starting Telegram Bot...");
 const bot = new TelegramBot(TOKEN, { polling: true });
 
 app.use(bodyParser.json());
 
-mongoose.set('strictQuery', true);
+mongoose.set("strictQuery", true);
 
-mongoose
-  .connect("mongodb+srv://osman:kina@cluster0.8j2ykko.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+await mongoose
+  .connect(dbConnectionString, {
+  })
   .then(async () => {
     console.log("Connected to MongoDB");
 
@@ -93,13 +99,19 @@ mongoose
 
     function checkPassword(password: string): boolean {
       const filePath = path.join(__dirname, "../passwords.txt");
-      const passwords = fs.readFileSync(filePath, "utf-8").split("\n").map(p => p.trim());
+      const passwords = fs
+        .readFileSync(filePath, "utf-8")
+        .split("\n")
+        .map((p) => p.trim());
       return passwords.includes(password.trim());
     }
 
     function checkAdminPassword(password: string): boolean {
       const filePath = path.join(__dirname, "../admin_passwords.txt");
-      const passwords = fs.readFileSync(filePath, "utf-8").split("\n").map(p => p.trim());
+      const passwords = fs
+        .readFileSync(filePath, "utf-8")
+        .split("\n")
+        .map((p) => p.trim());
       return passwords.includes(password.trim());
     }
 
@@ -108,10 +120,10 @@ mongoose
 
       const user = await User.findOne({ chatId });
       if (user && user.authenticated) {
-        const message = user.isAdmin 
-          ? "Вы вошли как администратор! Выберите раздел." 
+        const message = user.isAdmin
+          ? "Вы вошли как администратор! Выберите раздел."
           : "Вы уже вошли в систему! Выберите раздел.";
-        
+
         bot.sendMessage(chatId, message, {
           reply_markup: {
             keyboard: [
@@ -121,7 +133,7 @@ mongoose
               [{ text: "Помощь 🚨" }],
               [{ text: "Как работать с ботом ❓" }],
               ...(user.isAdmin ? [[{ text: "Управление паролями 🛠" }]] : []),
-              [{ text: "Logout" }]
+              [{ text: "Logout" }],
             ],
             one_time_keyboard: true,
             resize_keyboard: true,
@@ -152,7 +164,7 @@ mongoose
         if (text === "Logout") {
           await User.findOneAndUpdate(
             { chatId },
-            { authenticated: false, isAdmin: false },
+            { authenticated: false, isAdmin: false }
           );
           bot.sendMessage(chatId, "Вы успешно вышли из системы.", {
             reply_markup: {
@@ -169,7 +181,7 @@ mongoose
                   [{ text: "Показать все пароли" }],
                   [{ text: "Добавить пароль" }],
                   [{ text: "Удалить пароль" }],
-                  [{ text: "Назад" }]
+                  [{ text: "Назад" }],
                 ],
                 one_time_keyboard: true,
                 resize_keyboard: true,
@@ -184,7 +196,10 @@ mongoose
             bot.once("message", (msg: Message) => {
               const newPass = msg.text?.trim();
               if (newPass) {
-                fs.appendFileSync(path.join(__dirname, "../passwords.txt"), `\n${newPass}`);
+                fs.appendFileSync(
+                  path.join(__dirname, "../passwords.txt"),
+                  `\n${newPass}`
+                );
                 bot.sendMessage(chatId, "Пароль добавлен.");
               }
             });
@@ -194,8 +209,11 @@ mongoose
               const delPass = msg.text?.trim();
               if (delPass) {
                 const filePath = path.join(__dirname, "../passwords.txt");
-                const passwords = fs.readFileSync(filePath, "utf-8").split("\n").map(p => p.trim());
-                const updatedPasswords = passwords.filter(p => p !== delPass);
+                const passwords = fs
+                  .readFileSync(filePath, "utf-8")
+                  .split("\n")
+                  .map((p) => p.trim());
+                const updatedPasswords = passwords.filter((p) => p !== delPass);
                 fs.writeFileSync(filePath, updatedPasswords.join("\n"));
                 bot.sendMessage(chatId, "Пароль удален.");
               }
@@ -210,7 +228,7 @@ mongoose
                   [{ text: "Помощь 🚨" }],
                   [{ text: "Как работать с ботом ❓" }],
                   [{ text: "Управление паролями 🛠" }],
-                  [{ text: "Logout" }]
+                  [{ text: "Logout" }],
                 ],
                 one_time_keyboard: true,
                 resize_keyboard: true,
@@ -258,12 +276,18 @@ mongoose
 
             bot.sendChatAction(chatId, "upload_document");
 
-            bot.sendDocument(chatId, filePath).then(() => {
-              bot.sendMessage(chatId, "Гайд отправлен!");
-            }).catch(error => {
-              bot.sendMessage(chatId, "Произошла ошибка при отправке гайда. Пожалуйста, попробуйте снова.");
-              console.error(error);
-            });
+            bot
+              .sendDocument(chatId, filePath)
+              .then(() => {
+                bot.sendMessage(chatId, "Гайд отправлен!");
+              })
+              .catch((error) => {
+                bot.sendMessage(
+                  chatId,
+                  "Произошла ошибка при отправке гайда. Пожалуйста, попробуйте снова."
+                );
+                console.error(error);
+              });
           }
         }
       } else if (text === "Login") {
@@ -283,7 +307,7 @@ mongoose
               [{ text: "Отзывы 💬" }],
               [{ text: "Помощь 🚨" }],
               [{ text: "Как работать с ботом ❓" }],
-              [{ text: "Logout" }]
+              [{ text: "Logout" }],
             ],
             one_time_keyboard: true,
             resize_keyboard: true,
@@ -296,21 +320,25 @@ mongoose
           { upsert: true, new: true }
         );
 
-        bot.sendMessage(chatId, "Вы вошли как администратор! Выберите раздел.", {
-          reply_markup: {
-            keyboard: [
-              [{ text: "Видео Курсы 🎉" }],
-              [{ text: "Гайды 🥋" }],
-              [{ text: "Отзывы 💬" }],
-              [{ text: "Помощь 🚨" }],
-              [{ text: "Как работать с ботом ❓" }],
-              [{ text: "Управление паролями 🛠" }],
-              [{ text: "Logout" }]
-            ],
-            one_time_keyboard: true,
-            resize_keyboard: true,
-          },
-        });
+        bot.sendMessage(
+          chatId,
+          "Вы вошли как администратор! Выберите раздел.",
+          {
+            reply_markup: {
+              keyboard: [
+                [{ text: "Видео Курсы 🎉" }],
+                [{ text: "Гайды 🥋" }],
+                [{ text: "Отзывы 💬" }],
+                [{ text: "Помощь 🚨" }],
+                [{ text: "Как работать с ботом ❓" }],
+                [{ text: "Управление паролями 🛠" }],
+                [{ text: "Logout" }],
+              ],
+              one_time_keyboard: true,
+              resize_keyboard: true,
+            },
+          }
+        );
       } else if (text) {
         bot.sendMessage(chatId, "Пароль неверный, попробуйте снова.");
       }
