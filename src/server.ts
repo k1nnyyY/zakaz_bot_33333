@@ -260,23 +260,11 @@ await mongoose
           ) {
             let filePath = "";
             if (text === "Гайд по набору мышечной массы") {
-              filePath = path.join(
-                __dirname,
-                "assets",
-                "Гайд по набору мышечной массы.pdf"
-              );
+              filePath = path.join(__dirname, "assets", "Гайд_по_набору_мышечной_массы_compressed.pdf");
             } else if (text === "Гайд по снижению веса") {
-              filePath = path.join(
-                __dirname,
-                "assets",
-                "ГАЙД ПО СНИЖЕНИЮ ВЕСА.pdf"
-              );
+              filePath = path.join(__dirname, "assets", "Гайд_по_снижению_веса_compressed.pdf");
             } else if (text === "Гайд по подготовке к турниру") {
-              filePath = path.join(
-                __dirname,
-                "assets",
-                "Гайд по подготовке к турниру.pdf"
-              );
+              filePath = path.join(__dirname, "assets", "Гайд_по_подготовке_к_турниру_compressed.pdf");
             }
 
             bot.sendChatAction(chatId, "upload_document");
