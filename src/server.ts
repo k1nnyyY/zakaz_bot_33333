@@ -356,34 +356,50 @@ await mongoose
           },
         ]) || [];
 
-        bot.sendPhoto(chatId, lesson.imageUrl, {
-          caption: `Урок ${lesson.lessonNumber}: ${lesson.description}\n[Смотреть видео](${lesson.videoUrl})`,
-          parse_mode: "Markdown",
-          reply_markup: {
-            inline_keyboard: inlineKeyboard,
-          },
-        });
+        if (lesson.imageUrl) {
+          bot.sendPhoto(chatId, lesson.imageUrl, {
+            caption: `Урок ${lesson.lessonNumber}: ${lesson.description}\n[Смотреть видео](${lesson.videoUrl})`,
+            parse_mode: "Markdown",
+            reply_markup: {
+              inline_keyboard: inlineKeyboard,
+            },
+          });
+        } else {
+          bot.sendMessage(chatId, `Урок ${lesson.lessonNumber}: ${lesson.description}\n[Смотреть видео](${lesson.videoUrl})`, {
+            parse_mode: "Markdown",
+            reply_markup: {
+              inline_keyboard: inlineKeyboard,
+            },
+          });
+        }
       });
     });
 
     bot.on("callback_query", (callbackQuery) => {
       const { message, data } = callbackQuery;
-      const { lessonNumber, subLessonNumber } = JSON.parse(data);
+      if (!message) {
+        return;
+      }
 
-      Lesson.findOne({ lessonNumber }).then((lesson) => {
-        if (lesson) {
-          const subLesson = lesson.subLessons.find(
-            (s) => s.lessonNumber === subLessonNumber
-          );
-          if (subLesson) {
-            bot.sendMessage(
-              message.chat.id,
-              `Подурок ${subLesson.lessonNumber}: ${subLesson.title}\n[Смотреть видео](${subLesson.videoUrl})`,
-              { parse_mode: "Markdown" }
+      try {
+        const { lessonNumber, subLessonNumber } = JSON.parse(data);
+        Lesson.findOne({ lessonNumber }).then((lesson) => {
+          if (lesson && lesson.subLessons) {
+            const subLesson = lesson.subLessons.find(
+              (s) => s.lessonNumber === subLessonNumber
             );
+            if (subLesson) {
+              bot.sendMessage(
+                message.chat.id,
+                `Подурок ${subLesson.lessonNumber}: ${subLesson.title}\n[Смотреть видео](${subLesson.videoUrl})`,
+                { parse_mode: "Markdown" }
+              );
+            }
           }
-        }
-      });
+        });
+      } catch (error) {
+        console.error("Error parsing callback data: ", error);
+      }
     });
 
     app.listen(PORT, () => {
