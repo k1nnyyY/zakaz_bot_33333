@@ -245,7 +245,19 @@ await mongoose
             });
           }
         } else {
-          if (text === "Гайды 🥋") {
+          if (text === "Видео Курсы 🎉") {
+            bot.sendMessage(chatId, "Вот доступные плейлисты:", {
+              reply_markup: {
+                keyboard: [
+                  [{ text: "Плейлист 1" }],
+                  [{ text: "Плейлист 2" }],
+                  [{ text: "Назад" }],
+                ],
+                one_time_keyboard: true,
+                resize_keyboard: true,
+              },
+            });
+          } else if (text === "Гайды 🥋") {
             bot.sendMessage(chatId, "Выберите один из следующих гайдов:", {
               reply_markup: {
                 keyboard: [
@@ -285,6 +297,28 @@ await mongoose
                 );
                 console.error(error);
               });
+          } else if (text === "Плейлист 1") {
+            const imgPath = path.join(__dirname, "assets", "img1.jpg");
+            bot.sendPhoto(chatId, imgPath, {
+              caption: "Это плейлист 1. Выберите урок:",
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: "Урок 1", callback_data: "1" }],
+                  [{ text: "Урок 2", callback_data: "2" }],
+                ],
+              },
+            });
+          } else if (text === "Плейлист 2") {
+            const imgPath = path.join(__dirname, "assets", "img1.jpg");
+            bot.sendPhoto(chatId, imgPath, {
+              caption: "Это плейлист 2. Выберите урок:",
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: "Урок 1", callback_data: "3" }],
+                  [{ text: "Урок 2", callback_data: "4" }],
+                ],
+              },
+            });
           }
         }
       } else if (text === "Login") {
