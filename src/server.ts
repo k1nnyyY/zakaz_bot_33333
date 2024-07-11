@@ -8,6 +8,7 @@ import dotenv from "dotenv";
 import dbConnectionString from "./dbConfig.js";
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import https from 'https'; // Добавляем импорт модуля https
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -183,11 +184,12 @@ await mongoose
 
               const file = await bot.getFile(fileId);
               const filePath = file.file_path;
+              if (!filePath) return; // Проверка на undefined
               const fileUrl = `https://api.telegram.org/file/bot${TOKEN}/${filePath}`;
               const localPath = path.join(imagesPath, path.basename(filePath));
               const fileStream = fs.createWriteStream(localPath);
 
-              https.get(fileUrl, (response) => {
+              https.get(fileUrl, (response: any) => {
                 response.pipe(fileStream);
                 fileStream.on("finish", () => {
                   fileStream.close();
