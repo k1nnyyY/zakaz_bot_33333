@@ -19,6 +19,12 @@ interface ILesson extends Document {
   lessonNumber: number;
   videoUrl: string;
   description: string;
+  imageUrl?: string;
+  subLessons?: Array<{
+    lessonNumber: number;
+    title: string;
+    videoUrl: string;
+  }>;
 }
 
 const LessonSchema: Schema = new Schema({
@@ -26,6 +32,14 @@ const LessonSchema: Schema = new Schema({
   lessonNumber: { type: Number, required: true },
   videoUrl: { type: String, required: true },
   description: { type: String, required: true },
+  imageUrl: { type: String, required: false },
+  subLessons: [
+    {
+      lessonNumber: { type: Number, required: false },
+      title: { type: String, required: false },
+      videoUrl: { type: String, required: false },
+    },
+  ],
 });
 
 const Lesson = mongoose.model<ILesson>("Lesson", LessonSchema);
@@ -46,7 +60,7 @@ const User = mongoose.model<IUser>("User", UserSchema);
 
 const app = express();
 const PORT = process.env.PORT || "3000";
-const TOKEN = process.env.BOT_TOKEN || "6900560465:AAFZI94ICbWibR09mBegOL0OIgnN1gcSb_8";
+const TOKEN = process.env.BOT_TOKEN || "YOUR_BOT_TOKEN";
 
 console.log("Starting Telegram Bot...");
 const bot = new TelegramBot(TOKEN, { polling: true });
@@ -67,36 +81,26 @@ await mongoose
         lessonNumber: 1,
         videoUrl: "http://example.com/lesson1",
         description: "Description for lesson 1",
+        imageUrl: "http://example.com/image1.jpg",
       },
       {
         playlist: "1",
         lessonNumber: 2,
         videoUrl: "http://example.com/lesson2",
         description: "Description for lesson 2",
-      },
-      {
-        playlist: "2",
-        lessonNumber: 1,
-        videoUrl: "http://example.com/lesson3",
-        description: "Description for lesson 3",
-      },
-      {
-        playlist: "2",
-        lessonNumber: 2,
-        videoUrl: "http://example.com/lesson4",
-        description: "Description for lesson 4",
-      },
-      {
-        playlist: "3",
-        lessonNumber: 1,
-        videoUrl: "http://example.com/lesson5",
-        description: "Description for lesson 5",
-      },
-      {
-        playlist: "3",
-        lessonNumber: 2,
-        videoUrl: "http://example.com/lesson6",
-        description: "Description for lesson 6",
+        imageUrl: "http://example.com/image2.jpg",
+        subLessons: [
+          {
+            lessonNumber: 2.1,
+            title: "Sub Lesson 1",
+            videoUrl: "http://example.com/sublesson1",
+          },
+          {
+            lessonNumber: 2.2,
+            title: "Sub Lesson 2",
+            videoUrl: "http://example.com/sublesson2",
+          },
+        ],
       },
     ];
 
@@ -335,6 +339,51 @@ await mongoose
       } else if (text) {
         bot.sendMessage(chatId, "Пароль неверный, попробуйте снова.");
       }
+    });
+
+    bot.onText(/\/lessons/, async (msg: Message) => {
+      const chatId = msg.chat.id;
+      const lessons = await Lesson.find({}).sort({ lessonNumber: 1 });
+
+      lessons.forEach((lesson) => {
+        const inlineKeyboard = lesson.subLessons?.map((subLesson) => [
+          {
+            text: subLesson.title,
+            callback_data: JSON.stringify({
+              lessonNumber: lesson.lessonNumber,
+              subLessonNumber: subLesson.lessonNumber,
+            }),
+          },
+        ]) || [];
+
+        bot.sendPhoto(chatId, lesson.imageUrl, {
+          caption: `Урок ${lesson.lessonNumber}: ${lesson.description}\n[Смотреть видео](${lesson.videoUrl})`,
+          parse_mode: "Markdown",
+          reply_markup: {
+            inline_keyboard: inlineKeyboard,
+          },
+        });
+      });
+    });
+
+    bot.on("callback_query", (callbackQuery) => {
+      const { message, data } = callbackQuery;
+      const { lessonNumber, subLessonNumber } = JSON.parse(data);
+
+      Lesson.findOne({ lessonNumber }).then((lesson) => {
+        if (lesson) {
+          const subLesson = lesson.subLessons.find(
+            (s) => s.lessonNumber === subLessonNumber
+          );
+          if (subLesson) {
+            bot.sendMessage(
+              message.chat.id,
+              `Подурок ${subLesson.lessonNumber}: ${subLesson.title}\n[Смотреть видео](${subLesson.videoUrl})`,
+              { parse_mode: "Markdown" }
+            );
+          }
+        }
+      });
     });
 
     app.listen(PORT, () => {
