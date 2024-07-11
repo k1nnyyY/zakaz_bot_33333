@@ -1,4 +1,3 @@
-// Импортируйте необходимые модули и настраивайте бота, MongoDB и другие зависимости
 import express from "express";
 import bodyParser from "body-parser";
 import TelegramBot, { Message } from "node-telegram-bot-api";
@@ -20,7 +19,8 @@ interface ILesson extends Document {
   lessonNumber: number;
   videoUrl: string;
   description: string;
-  imageUrl?: string;
+  imageUrl: string;
+  hasSubLessons: boolean;
   subLessons?: Array<{
     lessonNumber: number;
     title: string;
@@ -33,7 +33,8 @@ const LessonSchema: Schema = new Schema({
   lessonNumber: { type: Number, required: true },
   videoUrl: { type: String, required: true },
   description: { type: String, required: true },
-  imageUrl: { type: String, required: false },
+  imageUrl: { type: String, required: true },
+  hasSubLessons: { type: Boolean, required: true },
   subLessons: [
     {
       lessonNumber: { type: Number, required: false },
@@ -74,6 +75,11 @@ await mongoose
   .connect(dbConnectionString, {})
   .then(async () => {
     console.log("Connected to MongoDB");
+
+    const imagesPath = path.join(__dirname, "images");
+    if (!fs.existsSync(imagesPath)) {
+      fs.mkdirSync(imagesPath);
+    }
 
     function checkPassword(password: string): boolean {
       const filePath = path.join(__dirname, "../passwords.txt");
@@ -170,26 +176,47 @@ await mongoose
               },
             });
           } else if (text === "Добавить урок") {
-            bot.sendMessage(chatId, "Введите данные урока в формате:\n<Плейлист>;<Номер урока>;<URL видео>;<Описание>;<URL изображения> (необязательно)", {
-              reply_markup: {
-                force_reply: true,
-              },
-            });
-            bot.onReplyToMessage(chatId, msg.message_id, async (reply) => {
-              const lessonData = reply.text?.split(";");
-              if (lessonData && lessonData.length >= 4) {
-                const newLesson = new Lesson({
-                  playlist: lessonData[0].trim(),
-                  lessonNumber: Number(lessonData[1].trim()),
-                  videoUrl: lessonData[2].trim(),
-                  description: lessonData[3].trim(),
-                  imageUrl: lessonData[4]?.trim() || undefined,
+            bot.sendMessage(chatId, "Пожалуйста, отправьте картинку для превью урока.");
+            bot.once("photo", async (msg: Message) => {
+              const fileId = msg.photo?.[msg.photo.length - 1].file_id;
+              if (!fileId) return;
+
+              const file = await bot.getFile(fileId);
+              const filePath = file.file_path;
+              const fileUrl = `https://api.telegram.org/file/bot${TOKEN}/${filePath}`;
+              const localPath = path.join(imagesPath, path.basename(filePath));
+              const fileStream = fs.createWriteStream(localPath);
+
+              https.get(fileUrl, (response) => {
+                response.pipe(fileStream);
+                fileStream.on("finish", () => {
+                  fileStream.close();
+
+                  bot.sendMessage(chatId, "Теперь введите данные урока в формате:\n<Плейлист>;<Номер урока>;<URL видео>;<Описание>;<Есть подуроки (да/нет)>", {
+                    reply_markup: {
+                      force_reply: true,
+                    },
+                  });
+
+                  bot.onReplyToMessage(chatId, msg.message_id, async (reply) => {
+                    const lessonData = reply.text?.split(";");
+                    if (lessonData && lessonData.length >= 5) {
+                      const newLesson = new Lesson({
+                        playlist: lessonData[0].trim(),
+                        lessonNumber: Number(lessonData[1].trim()),
+                        videoUrl: lessonData[2].trim(),
+                        description: lessonData[3].trim(),
+                        imageUrl: localPath,
+                        hasSubLessons: lessonData[4].trim().toLowerCase() === "да",
+                      });
+                      await newLesson.save();
+                      bot.sendMessage(chatId, "Урок добавлен.");
+                    } else {
+                      bot.sendMessage(chatId, "Неверный формат данных. Попробуйте снова.");
+                    }
+                  });
                 });
-                await newLesson.save();
-                bot.sendMessage(chatId, "Урок добавлен.");
-              } else {
-                bot.sendMessage(chatId, "Неверный формат данных. Попробуйте снова.");
-              }
+              });
             });
           } else if (text === "Удалить урок") {
             bot.sendMessage(chatId, "Введите номер урока для удаления:", {
