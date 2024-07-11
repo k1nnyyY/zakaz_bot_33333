@@ -8,7 +8,7 @@ import dotenv from "dotenv";
 import dbConnectionString from "./dbConfig.js";
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import https from 'https';
+import https from 'https'; // Добавляем импорт модуля https
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -117,8 +117,12 @@ await mongoose
               [{ text: "Отзывы 💬" }],
               [{ text: "Помощь 🚨" }],
               [{ text: "Как работать с ботом ❓" }],
-              [{ text: "Управление уроками 📚" }],
-              ...(user.isAdmin ? [[{ text: "Управление паролями 🛠" }]] : []),
+              ...(user.isAdmin
+                ? [
+                  [{ text: "Управление уроками 📚" }],
+                  [{ text: "Управление паролями 🛠" }],
+                ]
+                : []),
               [{ text: "Logout" }],
             ],
             one_time_keyboard: true,
@@ -166,7 +170,6 @@ await mongoose
                 keyboard: [
                   [{ text: "Добавить урок" }],
                   [{ text: "Удалить урок" }],
-                  [{ text: "Просмотреть уроки" }],
                   [{ text: "Назад" }],
                 ],
                 one_time_keyboard: true,
@@ -191,14 +194,14 @@ await mongoose
                 fileStream.on("finish", () => {
                   fileStream.close();
 
-                  bot.sendMessage(chatId, "Теперь введите данные урока в формате:\n1) Плейлист\n2) Номер урока\n3) URL видео\n4) Описание\n5) Есть подуроки (да/нет)", {
+                  bot.sendMessage(chatId, "Теперь введите данные урока в формате:\n<Плейлист>;<Номер урока>;<URL видео>;<Описание>;<Есть подуроки (да/нет)>", {
                     reply_markup: {
                       force_reply: true,
                     },
                   });
 
                   bot.onReplyToMessage(chatId, msg.message_id, async (reply) => {
-                    const lessonData = reply.text?.split("\n");
+                    const lessonData = reply.text?.split(";");
                     if (lessonData && lessonData.length >= 5) {
                       const newLesson = new Lesson({
                         playlist: lessonData[0].trim(),
@@ -230,37 +233,6 @@ await mongoose
                 bot.sendMessage(chatId, "Урок удален.");
               } else {
                 bot.sendMessage(chatId, "Неверный номер урока. Попробуйте снова.");
-              }
-            });
-          } else if (text === "Просмотреть уроки") {
-            const lessons = await Lesson.find({}).sort({ lessonNumber: 1 });
-
-            lessons.forEach((lesson) => {
-              const inlineKeyboard = lesson.subLessons?.map((subLesson) => [
-                {
-                  text: subLesson.title,
-                  callback_data: JSON.stringify({
-                    lessonNumber: lesson.lessonNumber,
-                    subLessonNumber: subLesson.lessonNumber,
-                  }),
-                },
-              ]) || [];
-
-              if (lesson.imageUrl) {
-                bot.sendPhoto(chatId, lesson.imageUrl, {
-                  caption: `Урок ${lesson.lessonNumber}: ${lesson.description}\n[Смотреть видео](${lesson.videoUrl})`,
-                  parse_mode: "Markdown",
-                  reply_markup: {
-                    inline_keyboard: inlineKeyboard,
-                  },
-                });
-              } else {
-                bot.sendMessage(chatId, `Урок ${lesson.lessonNumber}: ${lesson.description}\n[Смотреть видео](${lesson.videoUrl})`, {
-                  parse_mode: "Markdown",
-                  reply_markup: {
-                    inline_keyboard: inlineKeyboard,
-                  },
-                });
               }
             });
           } else if (text === "Управление паролями 🛠") {
@@ -467,6 +439,40 @@ await mongoose
       } else if (text) {
         bot.sendMessage(chatId, "Пароль неверный, попробуйте снова.");
       }
+    });
+
+    bot.onText(/\/lessons/, async (msg: Message) => {
+      const chatId = msg.chat.id;
+      const lessons = await Lesson.find({}).sort({ lessonNumber: 1 });
+
+      lessons.forEach((lesson) => {
+        const inlineKeyboard = lesson.subLessons?.map((subLesson) => [
+          {
+            text: subLesson.title,
+            callback_data: JSON.stringify({
+              lessonNumber: lesson.lessonNumber,
+              subLessonNumber: subLesson.lessonNumber,
+            }),
+          },
+        ]) || [];
+
+        if (lesson.imageUrl) {
+          bot.sendPhoto(chatId, lesson.imageUrl, {
+            caption: `Урок ${lesson.lessonNumber}: ${lesson.description}\n[Смотреть видео](${lesson.videoUrl})`,
+            parse_mode: "Markdown",
+            reply_markup: {
+              inline_keyboard: inlineKeyboard,
+            },
+          });
+        } else {
+          bot.sendMessage(chatId, `Урок ${lesson.lessonNumber}: ${lesson.description}\n[Смотреть видео](${lesson.videoUrl})`, {
+            parse_mode: "Markdown",
+            reply_markup: {
+              inline_keyboard: inlineKeyboard,
+            },
+          });
+        }
+      });
     });
 
     bot.on("callback_query", (callbackQuery) => {
