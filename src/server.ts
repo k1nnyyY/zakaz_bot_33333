@@ -1,3 +1,4 @@
+// Импортируйте необходимые модули и настраивайте бота, MongoDB и другие зависимости
 import express from "express";
 import bodyParser from "body-parser";
 import TelegramBot, { Message } from "node-telegram-bot-api";
@@ -70,41 +71,9 @@ app.use(bodyParser.json());
 mongoose.set("strictQuery", true);
 
 await mongoose
-  .connect(dbConnectionString, {
-  })
+  .connect(dbConnectionString, {})
   .then(async () => {
     console.log("Connected to MongoDB");
-
-    const exampleLessons = [
-      {
-        playlist: "1",
-        lessonNumber: 1,
-        videoUrl: "http://example.com/lesson1",
-        description: "Description for lesson 1",
-        imageUrl: "http://example.com/image1.jpg",
-      },
-      {
-        playlist: "1",
-        lessonNumber: 2,
-        videoUrl: "http://example.com/lesson2",
-        description: "Description for lesson 2",
-        imageUrl: "http://example.com/image2.jpg",
-        subLessons: [
-          {
-            lessonNumber: 2.1,
-            title: "Sub Lesson 1",
-            videoUrl: "http://example.com/sublesson1",
-          },
-          {
-            lessonNumber: 2.2,
-            title: "Sub Lesson 2",
-            videoUrl: "http://example.com/sublesson2",
-          },
-        ],
-      },
-    ];
-
-    await Lesson.insertMany(exampleLessons);
 
     function checkPassword(password: string): boolean {
       const filePath = path.join(__dirname, "../passwords.txt");
@@ -141,7 +110,12 @@ await mongoose
               [{ text: "Отзывы 💬" }],
               [{ text: "Помощь 🚨" }],
               [{ text: "Как работать с ботом ❓" }],
-              ...(user.isAdmin ? [[{ text: "Управление паролями 🛠" }]] : []),
+              ...(user.isAdmin
+                ? [
+                    [{ text: "Управление уроками 📚" }],
+                    [{ text: "Управление паролями 🛠" }],
+                  ]
+                : []),
               [{ text: "Logout" }],
             ],
             one_time_keyboard: true,
@@ -183,7 +157,56 @@ await mongoose
             },
           });
         } else if (user.isAdmin) {
-          if (text === "Управление паролями 🛠") {
+          if (text === "Управление уроками 📚") {
+            bot.sendMessage(chatId, "Выберите действие:", {
+              reply_markup: {
+                keyboard: [
+                  [{ text: "Добавить урок" }],
+                  [{ text: "Удалить урок" }],
+                  [{ text: "Назад" }],
+                ],
+                one_time_keyboard: true,
+                resize_keyboard: true,
+              },
+            });
+          } else if (text === "Добавить урок") {
+            bot.sendMessage(chatId, "Введите данные урока в формате:\n<Плейлист>;<Номер урока>;<URL видео>;<Описание>;<URL изображения> (необязательно)", {
+              reply_markup: {
+                force_reply: true,
+              },
+            });
+            bot.onReplyToMessage(chatId, msg.message_id, async (reply) => {
+              const lessonData = reply.text?.split(";");
+              if (lessonData && lessonData.length >= 4) {
+                const newLesson = new Lesson({
+                  playlist: lessonData[0].trim(),
+                  lessonNumber: Number(lessonData[1].trim()),
+                  videoUrl: lessonData[2].trim(),
+                  description: lessonData[3].trim(),
+                  imageUrl: lessonData[4]?.trim() || undefined,
+                });
+                await newLesson.save();
+                bot.sendMessage(chatId, "Урок добавлен.");
+              } else {
+                bot.sendMessage(chatId, "Неверный формат данных. Попробуйте снова.");
+              }
+            });
+          } else if (text === "Удалить урок") {
+            bot.sendMessage(chatId, "Введите номер урока для удаления:", {
+              reply_markup: {
+                force_reply: true,
+              },
+            });
+            bot.onReplyToMessage(chatId, msg.message_id, async (reply) => {
+              const lessonNumber = reply.text?.trim();
+              if (lessonNumber) {
+                await Lesson.deleteOne({ lessonNumber: Number(lessonNumber) });
+                bot.sendMessage(chatId, "Урок удален.");
+              } else {
+                bot.sendMessage(chatId, "Неверный номер урока. Попробуйте снова.");
+              }
+            });
+          } else if (text === "Управление паролями 🛠") {
             bot.sendMessage(chatId, "Выберите действие:", {
               reply_markup: {
                 keyboard: [
@@ -236,6 +259,7 @@ await mongoose
                   [{ text: "Отзывы 💬" }],
                   [{ text: "Помощь 🚨" }],
                   [{ text: "Как работать с ботом ❓" }],
+                  [{ text: "Управление уроками 📚" }],
                   [{ text: "Управление паролями 🛠" }],
                   [{ text: "Logout" }],
                 ],
@@ -276,11 +300,23 @@ await mongoose
           ) {
             let filePath = "";
             if (text === "Гайд по набору мышечной массы") {
-              filePath = path.join(__dirname, "assets", "Гайд_по_набору_мышечной_массы_compressed.pdf");
+              filePath = path.join(
+                __dirname,
+                "assets",
+                "Гайд_по_набору_мышечной_массы_compressed.pdf"
+              );
             } else if (text === "Гайд по снижению веса") {
-              filePath = path.join(__dirname, "assets", "Гайд_по_снижению_веса_compressed.pdf");
+              filePath = path.join(
+                __dirname,
+                "assets",
+                "Гайд_по_снижению_веса_compressed.pdf"
+              );
             } else if (text === "Гайд по подготовке к турниру") {
-              filePath = path.join(__dirname, "assets", "Гайд_по_подготовке_к_турниру_compressed.pdf");
+              filePath = path.join(
+                __dirname,
+                "assets",
+                "Гайд_по_подготовке_к_турниру_compressed.pdf"
+              );
             }
 
             bot.sendChatAction(chatId, "upload_document");
@@ -362,6 +398,7 @@ await mongoose
                 [{ text: "Отзывы 💬" }],
                 [{ text: "Помощь 🚨" }],
                 [{ text: "Как работать с ботом ❓" }],
+                [{ text: "Управление уроками 📚" }],
                 [{ text: "Управление паролями 🛠" }],
                 [{ text: "Logout" }],
               ],
