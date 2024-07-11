@@ -377,7 +377,7 @@ await mongoose
 
     bot.on("callback_query", (callbackQuery) => {
       const { message, data } = callbackQuery;
-      if (!message) {
+      if (!message || !data) {
         return;
       }
 
