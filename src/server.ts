@@ -107,7 +107,7 @@ await mongoose
       if (user && user.messageIds.length > 0) {
         for (const messageId of user.messageIds) {
           try {
-            await bot.deleteMessage(chatId, Number(messageId));
+            await bot.deleteMessage(chatId, Number(messageId)); // Приведение типа messageId к числу
           } catch (error) {
             console.error(`Failed to delete message ${messageId}:`, error);
           }
