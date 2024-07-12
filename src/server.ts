@@ -105,13 +105,13 @@ await mongoose
     async function clearPreviousMessages(chatId: number) {
       const user = await User.findOne({ chatId });
       if (user && user.messageIds.length > 0) {
-        user.messageIds.forEach(async (messageId) => {
+        for (const messageId of user.messageIds) {
           try {
-            await bot.deleteMessage(chatId, messageId.toString());
+            await bot.deleteMessage(chatId, messageId);
           } catch (error) {
             console.error(`Failed to delete message ${messageId}:`, error);
           }
-        });
+        }
         user.messageIds = [];
         await user.save();
       }
@@ -224,10 +224,10 @@ await mongoose
 
               https.get(fileUrl, (response: any) => {
                 response.pipe(fileStream);
-                fileStream.on("finish", () => {
+                fileStream.on("finish", async () => {
                   fileStream.close();
 
-                  const sentMessage = bot.sendMessage(chatId, "Теперь введите данные урока в формате:\n1) Плейлист\n2) Номер урока\n3) URL видео\n4) Описание\n5) Есть подуроки (да/нет)", {
+                  const sentMessage = await bot.sendMessage(chatId, "Теперь введите данные урока в формате:\n1) Плейлист\n2) Номер урока\n3) URL видео\n4) Описание\n5) Есть подуроки (да/нет)", {
                     reply_markup: {
                       force_reply: true,
                     },
@@ -248,9 +248,9 @@ await mongoose
                         hasSubLessons: lessonData[4].trim().toLowerCase() === "да",
                       });
                       await newLesson.save();
-                      bot.sendMessage(chatId, "Урок добавлен.");
+                      await bot.sendMessage(chatId, "Урок добавлен.");
                     } else {
-                      bot.sendMessage(chatId, "Неверный формат данных. Попробуйте снова.");
+                      await bot.sendMessage(chatId, "Неверный формат данных. Попробуйте снова.");
                     }
                   });
                 });
@@ -271,9 +271,9 @@ await mongoose
               const lessonNumber = reply.text?.trim();
               if (lessonNumber) {
                 await Lesson.deleteOne({ lessonNumber: Number(lessonNumber) });
-                bot.sendMessage(chatId, "Урок удален.");
+                await bot.sendMessage(chatId, "Урок удален.");
               } else {
-                bot.sendMessage(chatId, "Неверный номер урока. Попробуйте снова.");
+                await bot.sendMessage(chatId, "Неверный номер урока. Попробуйте снова.");
               }
             });
           } else if (text === "Просмотреть уроки") {
@@ -331,7 +331,7 @@ await mongoose
           } else if (text === "Показать все пароли") {
             const filePath = path.join(__dirname, "../passwords.txt");
             const passwords = fs.readFileSync(filePath, "utf-8");
-            bot.sendMessage(chatId, `Пароли пользователей:\n${passwords}`);
+            await bot.sendMessage(chatId, `Пароли пользователей:\n${passwords}`);
           } else if (text === "Добавить пароль") {
             const sentMessage = await bot.sendMessage(chatId, "Введите новый пароль:");
             user.messageIds.push(sentMessage.message_id);
@@ -344,7 +344,7 @@ await mongoose
                   path.join(__dirname, "../passwords.txt"),
                   `\n${newPass}`
                 );
-                bot.sendMessage(chatId, "Пароль добавлен.");
+                await bot.sendMessage(chatId, "Пароль добавлен.");
               }
             });
           } else if (text === "Удалить пароль") {
@@ -362,7 +362,7 @@ await mongoose
                   .map((p) => p.trim());
                 const updatedPasswords = passwords.filter((p) => p !== delPass);
                 fs.writeFileSync(filePath, updatedPasswords.join("\n"));
-                bot.sendMessage(chatId, "Пароль удален.");
+                await bot.sendMessage(chatId, "Пароль удален.");
               }
             });
           } else if (text === "Назад") {
@@ -510,8 +510,10 @@ await mongoose
         }
       } else if (text === "Login") {
         const sentMessage = await bot.sendMessage(chatId, "Пожалуйста, введите ваш пароль.");
-        user.messageIds.push(sentMessage.message_id);
-        await user.save();
+        if (user) {
+          user.messageIds.push(sentMessage.message_id);
+          await user.save();
+        }
       } else if (text && checkPassword(text)) {
         await User.findOneAndUpdate(
           { chatId },
@@ -534,8 +536,10 @@ await mongoose
           },
         });
 
-        user.messageIds.push(sentMessage.message_id);
-        await user.save();
+        if (user) {
+          user.messageIds.push(sentMessage.message_id);
+          await user.save();
+        }
       } else if (text && checkAdminPassword(text)) {
         await User.findOneAndUpdate(
           { chatId },
@@ -564,12 +568,16 @@ await mongoose
           }
         );
 
-        user.messageIds.push(sentMessage.message_id);
-        await user.save();
+        if (user) {
+          user.messageIds.push(sentMessage.message_id);
+          await user.save();
+        }
       } else if (text) {
         const sentMessage = await bot.sendMessage(chatId, "Пароль неверный, попробуйте снова.");
-        user.messageIds.push(sentMessage.message_id);
-        await user.save();
+        if (user) {
+          user.messageIds.push(sentMessage.message_id);
+          await user.save();
+        }
       }
     });
 
