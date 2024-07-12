@@ -184,14 +184,16 @@ await mongoose
         const merches = await Merch.find({});
 
         for (const merch of merches) {
-          const sentMessage = await bot.sendMessage(
-            chatId,
-            `${merch.name}\nЦена: ${merch.price}\nОписание: ${merch.description}`
-          );
+          const mediaGroup = merch.images.map((imagePath, index) => ({
+            type: "photo",
+            media: imagePath,
+            caption:
+              index === 0
+                ? `${merch.name}\nЦена: ${merch.price}\nОписание: ${merch.description}`
+                : undefined,
+          }));
 
-          for (const imagePath of merch.images) {
-            const sentImage = await bot.sendPhoto(chatId, imagePath);
-          }
+          await bot.sendMediaGroup(chatId, mediaGroup);
         }
         return;
       }
@@ -515,16 +517,16 @@ await mongoose
             const merches = await Merch.find({});
 
             for (const merch of merches) {
-              const sentMessage = await bot.sendMessage(
-                chatId,
-                `${merch.name}\nЦена: ${merch.price}\nОписание: ${merch.description}`
-              );
-              user.messageIds.push(sentMessage.message_id);
+              const mediaGroup = merch.images.map((imagePath, index) => ({
+                type: "photo",
+                media: imagePath,
+                caption:
+                  index === 0
+                    ? `${merch.name}\nЦена: ${merch.price}\nОписание: ${merch.description}`
+                    : undefined,
+              }));
 
-              for (const imagePath of merch.images) {
-                const sentImage = await bot.sendPhoto(chatId, imagePath);
-                user.messageIds.push(sentImage.message_id);
-              }
+              await bot.sendMediaGroup(chatId, mediaGroup);
             }
             await user.save();
           } else if (text === "Управление паролями 🛠") {
