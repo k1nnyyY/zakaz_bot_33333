@@ -398,10 +398,10 @@ await mongoose
             await user.save();
 
             bot.once("photo", async (msg: Message) => {
-              const fileIds = msg.photo?.map((photo) => photo.file_id);
-              if (!fileIds || fileIds.length === 0) return;
+              const fileIds = msg.photo?.map((photo) => photo.file_id) || [];
+              const imagePaths: string[] = [];
+              if (fileIds.length === 0) return;
 
-              const imagePaths = [];
               for (const fileId of fileIds) {
                 const file = await bot.getFile(fileId);
                 const filePath = file.file_path;
@@ -737,14 +737,11 @@ await mongoose
                 chatId,
                 `${merch.name}\nЦена: ${merch.price}\nОписание: ${merch.description}`
               );
-              user.messageIds.push(sentMessage.message_id);
 
               for (const imagePath of merch.images) {
                 const sentImage = await bot.sendPhoto(chatId, imagePath);
-                user.messageIds.push(sentImage.message_id);
               }
             }
-            await user.save();
           }
         }
       } else if (text === "Login") {
