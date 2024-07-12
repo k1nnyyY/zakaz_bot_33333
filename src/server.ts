@@ -51,12 +51,14 @@ interface IUser extends Document {
   chatId: number;
   authenticated: boolean;
   isAdmin: boolean;
+  messageIds: number[];
 }
 
 const UserSchema: Schema = new Schema({
   chatId: { type: Number, required: true, unique: true },
   authenticated: { type: Boolean, required: true, default: false },
   isAdmin: { type: Boolean, required: true, default: false },
+  messageIds: { type: [Number], default: [] },
 });
 
 const User = mongoose.model<IUser>("User", UserSchema);
@@ -100,6 +102,21 @@ await mongoose
       return passwords.includes(password.trim());
     }
 
+    async function clearPreviousMessages(chatId: number) {
+      const user = await User.findOne({ chatId });
+      if (user && user.messageIds.length > 0) {
+        user.messageIds.forEach(async (messageId) => {
+          try {
+            await bot.deleteMessage(chatId, messageId.toString());
+          } catch (error) {
+            console.error(`Failed to delete message ${messageId}:`, error);
+          }
+        });
+        user.messageIds = [];
+        await user.save();
+      }
+    }
+
     bot.onText(/\/start/, async (msg: Message) => {
       const chatId = msg.chat.id;
 
@@ -109,7 +126,7 @@ await mongoose
           ? "Вы вошли как администратор! Выберите раздел."
           : "Вы уже вошли в систему! Выберите раздел.";
 
-        bot.sendMessage(chatId, message, {
+        const sentMessage = await bot.sendMessage(chatId, message, {
           reply_markup: {
             keyboard: [
               [{ text: "Видео Курсы 🎉" }],
@@ -125,8 +142,11 @@ await mongoose
             resize_keyboard: true,
           },
         });
+
+        user.messageIds.push(sentMessage.message_id);
+        await user.save();
       } else {
-        bot.sendMessage(
+        const sentMessage = await bot.sendMessage(
           chatId,
           "Добро пожаловать! Пожалуйста, нажмите кнопку Login для входа.",
           {
@@ -137,6 +157,11 @@ await mongoose
             },
           }
         );
+
+        if (user) {
+          user.messageIds.push(sentMessage.message_id);
+          await user.save();
+        }
       }
     });
 
@@ -152,16 +177,21 @@ await mongoose
             { chatId },
             { authenticated: false, isAdmin: false }
           );
-          bot.sendMessage(chatId, "Вы успешно вышли из системы.", {
+          await clearPreviousMessages(chatId);
+          const sentMessage = await bot.sendMessage(chatId, "Вы успешно вышли из системы.", {
             reply_markup: {
               keyboard: [[{ text: "Login" }]],
               one_time_keyboard: true,
               resize_keyboard: true,
             },
           });
+
+          user.messageIds.push(sentMessage.message_id);
+          await user.save();
         } else if (user.isAdmin) {
           if (text === "Управление уроками 📚") {
-            bot.sendMessage(chatId, "Выберите действие:", {
+            await clearPreviousMessages(chatId);
+            const sentMessage = await bot.sendMessage(chatId, "Выберите действие:", {
               reply_markup: {
                 keyboard: [
                   [{ text: "Добавить урок" }],
@@ -173,15 +203,21 @@ await mongoose
                 resize_keyboard: true,
               },
             });
+
+            user.messageIds.push(sentMessage.message_id);
+            await user.save();
           } else if (text === "Добавить урок") {
-            bot.sendMessage(chatId, "Пожалуйста, отправьте картинку для превью урока.");
+            const sentMessage = await bot.sendMessage(chatId, "Пожалуйста, отправьте картинку для превью урока.");
+            user.messageIds.push(sentMessage.message_id);
+            await user.save();
+
             bot.once("photo", async (msg: Message) => {
               const fileId = msg.photo?.[msg.photo.length - 1].file_id;
               if (!fileId) return;
 
               const file = await bot.getFile(fileId);
               const filePath = file.file_path;
-              if (!filePath) return; // Проверка на undefined
+              if (!filePath) return;
               const fileUrl = `https://api.telegram.org/file/bot${TOKEN}/${filePath}`;
               const localPath = path.join(imagesPath, path.basename(filePath));
               const fileStream = fs.createWriteStream(localPath);
@@ -191,13 +227,16 @@ await mongoose
                 fileStream.on("finish", () => {
                   fileStream.close();
 
-                  bot.sendMessage(chatId, "Теперь введите данные урока в формате:\n1) Плейлист\n2) Номер урока\n3) URL видео\n4) Описание\n5) Есть подуроки (да/нет)", {
+                  const sentMessage = bot.sendMessage(chatId, "Теперь введите данные урока в формате:\n1) Плейлист\n2) Номер урока\n3) URL видео\n4) Описание\n5) Есть подуроки (да/нет)", {
                     reply_markup: {
                       force_reply: true,
                     },
                   });
 
-                  bot.onReplyToMessage(chatId, msg.message_id, async (reply) => {
+                  user.messageIds.push(sentMessage.message_id);
+                  await user.save();
+
+                  bot.onReplyToMessage(chatId, sentMessage.message_id, async (reply) => {
                     const lessonData = reply.text?.split("\n");
                     if (lessonData && lessonData.length >= 5) {
                       const newLesson = new Lesson({
@@ -218,12 +257,17 @@ await mongoose
               });
             });
           } else if (text === "Удалить урок") {
-            bot.sendMessage(chatId, "Введите номер урока для удаления:", {
+            await clearPreviousMessages(chatId);
+            const sentMessage = await bot.sendMessage(chatId, "Введите номер урока для удаления:", {
               reply_markup: {
                 force_reply: true,
               },
             });
-            bot.onReplyToMessage(chatId, msg.message_id, async (reply) => {
+
+            user.messageIds.push(sentMessage.message_id);
+            await user.save();
+
+            bot.onReplyToMessage(chatId, sentMessage.message_id, async (reply) => {
               const lessonNumber = reply.text?.trim();
               if (lessonNumber) {
                 await Lesson.deleteOne({ lessonNumber: Number(lessonNumber) });
@@ -233,9 +277,10 @@ await mongoose
               }
             });
           } else if (text === "Просмотреть уроки") {
+            await clearPreviousMessages(chatId);
             const lessons = await Lesson.find({}).sort({ lessonNumber: 1 });
 
-            lessons.forEach((lesson) => {
+            for (const lesson of lessons) {
               const inlineKeyboard = lesson.subLessons?.map((subLesson) => [
                 {
                   text: subLesson.title,
@@ -247,24 +292,28 @@ await mongoose
               ]) || [];
 
               if (lesson.imageUrl) {
-                bot.sendPhoto(chatId, lesson.imageUrl, {
+                const sentMessage = await bot.sendPhoto(chatId, lesson.imageUrl, {
                   caption: `Урок ${lesson.lessonNumber}: ${lesson.description}\n[Смотреть видео](${lesson.videoUrl})`,
                   parse_mode: "Markdown",
                   reply_markup: {
                     inline_keyboard: inlineKeyboard,
                   },
                 });
+                user.messageIds.push(sentMessage.message_id);
               } else {
-                bot.sendMessage(chatId, `Урок ${lesson.lessonNumber}: ${lesson.description}\n[Смотреть видео](${lesson.videoUrl})`, {
+                const sentMessage = await bot.sendMessage(chatId, `Урок ${lesson.lessonNumber}: ${lesson.description}\n[Смотреть видео](${lesson.videoUrl})`, {
                   parse_mode: "Markdown",
                   reply_markup: {
                     inline_keyboard: inlineKeyboard,
                   },
                 });
+                user.messageIds.push(sentMessage.message_id);
               }
-            });
+            }
+            await user.save();
           } else if (text === "Управление паролями 🛠") {
-            bot.sendMessage(chatId, "Выберите действие:", {
+            await clearPreviousMessages(chatId);
+            const sentMessage = await bot.sendMessage(chatId, "Выберите действие:", {
               reply_markup: {
                 keyboard: [
                   [{ text: "Показать все пароли" }],
@@ -276,13 +325,19 @@ await mongoose
                 resize_keyboard: true,
               },
             });
+
+            user.messageIds.push(sentMessage.message_id);
+            await user.save();
           } else if (text === "Показать все пароли") {
             const filePath = path.join(__dirname, "../passwords.txt");
             const passwords = fs.readFileSync(filePath, "utf-8");
             bot.sendMessage(chatId, `Пароли пользователей:\n${passwords}`);
           } else if (text === "Добавить пароль") {
-            bot.sendMessage(chatId, "Введите новый пароль:");
-            bot.once("message", (msg: Message) => {
+            const sentMessage = await bot.sendMessage(chatId, "Введите новый пароль:");
+            user.messageIds.push(sentMessage.message_id);
+            await user.save();
+
+            bot.once("message", async (msg: Message) => {
               const newPass = msg.text?.trim();
               if (newPass) {
                 fs.appendFileSync(
@@ -293,8 +348,11 @@ await mongoose
               }
             });
           } else if (text === "Удалить пароль") {
-            bot.sendMessage(chatId, "Введите пароль для удаления:");
-            bot.once("message", (msg: Message) => {
+            const sentMessage = await bot.sendMessage(chatId, "Введите пароль для удаления:");
+            user.messageIds.push(sentMessage.message_id);
+            await user.save();
+
+            bot.once("message", async (msg: Message) => {
               const delPass = msg.text?.trim();
               if (delPass) {
                 const filePath = path.join(__dirname, "../passwords.txt");
@@ -308,7 +366,8 @@ await mongoose
               }
             });
           } else if (text === "Назад") {
-            bot.sendMessage(chatId, "Выберите раздел.", {
+            await clearPreviousMessages(chatId);
+            const sentMessage = await bot.sendMessage(chatId, "Выберите раздел.", {
               reply_markup: {
                 keyboard: [
                   [{ text: "Видео Курсы 🎉" }],
@@ -324,19 +383,16 @@ await mongoose
                 resize_keyboard: true,
               },
             });
+
+            user.messageIds.push(sentMessage.message_id);
+            await user.save();
           }
         } else {
           if (text === "Видео Курсы 🎉") {
+            await clearPreviousMessages(chatId);
             const lessons = await Lesson.find({}).sort({ lessonNumber: 1 });
 
-            // Очищаем старые сообщения уроков
-            bot.sendMessage(chatId, "Очистка старых уроков...", {
-              reply_markup: {
-                remove_keyboard: true,
-              },
-            });
-
-            lessons.forEach((lesson) => {
+            for (const lesson of lessons) {
               const inlineKeyboard = lesson.subLessons?.map((subLesson) => [
                 {
                   text: subLesson.title,
@@ -348,24 +404,27 @@ await mongoose
               ]) || [];
 
               if (lesson.imageUrl) {
-                bot.sendPhoto(chatId, lesson.imageUrl, {
+                const sentMessage = await bot.sendPhoto(chatId, lesson.imageUrl, {
                   caption: `Урок ${lesson.lessonNumber}: ${lesson.description}\n[Смотреть видео](${lesson.videoUrl})`,
                   parse_mode: "Markdown",
                   reply_markup: {
                     inline_keyboard: inlineKeyboard,
                   },
                 });
+                user.messageIds.push(sentMessage.message_id);
               } else {
-                bot.sendMessage(chatId, `Урок ${lesson.lessonNumber}: ${lesson.description}\n[Смотреть видео](${lesson.videoUrl})`, {
+                const sentMessage = await bot.sendMessage(chatId, `Урок ${lesson.lessonNumber}: ${lesson.description}\n[Смотреть видео](${lesson.videoUrl})`, {
                   parse_mode: "Markdown",
                   reply_markup: {
                     inline_keyboard: inlineKeyboard,
                   },
                 });
+                user.messageIds.push(sentMessage.message_id);
               }
-            });
+            }
+            await user.save();
           } else if (text === "Гайды 🥋") {
-            bot.sendMessage(chatId, "Выберите один из следующих гайдов:", {
+            const sentMessage = await bot.sendMessage(chatId, "Выберите один из следующих гайдов:", {
               reply_markup: {
                 keyboard: [
                   [{ text: "Гайд по набору мышечной массы" }],
@@ -376,6 +435,9 @@ await mongoose
                 resize_keyboard: true,
               },
             });
+
+            user.messageIds.push(sentMessage.message_id);
+            await user.save();
           } else if (
             text === "Гайд по набору мышечной массы" ||
             text === "Гайд по снижению веса" ||
@@ -418,7 +480,7 @@ await mongoose
               });
           } else if (text === "Плейлист 1") {
             const imgPath = path.join(__dirname, "assets", "img1.jpg");
-            bot.sendPhoto(chatId, imgPath, {
+            const sentMessage = await bot.sendPhoto(chatId, imgPath, {
               caption: "Это плейлист 1. Выберите урок:",
               reply_markup: {
                 inline_keyboard: [
@@ -427,9 +489,12 @@ await mongoose
                 ],
               },
             });
+
+            user.messageIds.push(sentMessage.message_id);
+            await user.save();
           } else if (text === "Плейлист 2") {
             const imgPath = path.join(__dirname, "assets", "img1.jpg");
-            bot.sendPhoto(chatId, imgPath, {
+            const sentMessage = await bot.sendPhoto(chatId, imgPath, {
               caption: "Это плейлист 2. Выберите урок:",
               reply_markup: {
                 inline_keyboard: [
@@ -438,10 +503,15 @@ await mongoose
                 ],
               },
             });
+
+            user.messageIds.push(sentMessage.message_id);
+            await user.save();
           }
         }
       } else if (text === "Login") {
-        bot.sendMessage(chatId, "Пожалуйста, введите ваш пароль.");
+        const sentMessage = await bot.sendMessage(chatId, "Пожалуйста, введите ваш пароль.");
+        user.messageIds.push(sentMessage.message_id);
+        await user.save();
       } else if (text && checkPassword(text)) {
         await User.findOneAndUpdate(
           { chatId },
@@ -449,7 +519,7 @@ await mongoose
           { upsert: true, new: true }
         );
 
-        bot.sendMessage(chatId, "Пароль верный! Выберите раздел.", {
+        const sentMessage = await bot.sendMessage(chatId, "Пароль верный! Выберите раздел.", {
           reply_markup: {
             keyboard: [
               [{ text: "Видео Курсы 🎉" }],
@@ -463,6 +533,9 @@ await mongoose
             resize_keyboard: true,
           },
         });
+
+        user.messageIds.push(sentMessage.message_id);
+        await user.save();
       } else if (text && checkAdminPassword(text)) {
         await User.findOneAndUpdate(
           { chatId },
@@ -470,7 +543,7 @@ await mongoose
           { upsert: true, new: true }
         );
 
-        bot.sendMessage(
+        const sentMessage = await bot.sendMessage(
           chatId,
           "Вы вошли как администратор! Выберите раздел.",
           {
@@ -490,8 +563,13 @@ await mongoose
             },
           }
         );
+
+        user.messageIds.push(sentMessage.message_id);
+        await user.save();
       } else if (text) {
-        bot.sendMessage(chatId, "Пароль неверный, попробуйте снова.");
+        const sentMessage = await bot.sendMessage(chatId, "Пароль неверный, попробуйте снова.");
+        user.messageIds.push(sentMessage.message_id);
+        await user.save();
       }
     });
 
