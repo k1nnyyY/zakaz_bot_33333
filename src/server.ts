@@ -107,7 +107,7 @@ await mongoose
       if (user && user.messageIds.length > 0) {
         for (const messageId of user.messageIds) {
           try {
-            await bot.deleteMessage(chatId, messageId);
+            await bot.deleteMessage(chatId, messageId.toString());
           } catch (error) {
             console.error(`Failed to delete message ${messageId}:`, error);
           }
