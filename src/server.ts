@@ -239,6 +239,7 @@ await mongoose
                     sentMessage.message_id,
                     async (reply) => {
                       const lessonData = reply.text?.split("\n");
+                      console.log("Received lesson data:", lessonData); // Debug log
                       if (lessonData && lessonData.length >= 5) {
                         const newLesson = new Lesson({
                           playlist: lessonData[0].trim(),
@@ -249,8 +250,17 @@ await mongoose
                           hasSubLessons:
                             lessonData[4].trim().toLowerCase() === "да",
                         });
-                        await newLesson.save();
-                        await bot.sendMessage(chatId, "Урок добавлен.");
+                        try {
+                          await newLesson.save();
+                          await bot.sendMessage(chatId, "Урок добавлен.");
+                          console.log("Lesson added successfully:", newLesson); // Debug log
+                        } catch (error) {
+                          console.error("Error saving lesson:", error); // Debug log
+                          await bot.sendMessage(
+                            chatId,
+                            "Произошла ошибка при добавлении урока."
+                          );
+                        }
                       } else {
                         await bot.sendMessage(
                           chatId,
