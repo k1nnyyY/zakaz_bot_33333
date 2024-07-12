@@ -329,6 +329,13 @@ await mongoose
           if (text === "Видео Курсы 🎉") {
             const lessons = await Lesson.find({}).sort({ lessonNumber: 1 });
 
+            // Очищаем старые сообщения уроков
+            bot.sendMessage(chatId, "Очистка старых уроков...", {
+              reply_markup: {
+                remove_keyboard: true,
+              },
+            });
+
             lessons.forEach((lesson) => {
               const inlineKeyboard = lesson.subLessons?.map((subLesson) => [
                 {
