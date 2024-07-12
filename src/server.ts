@@ -185,7 +185,7 @@ await mongoose
 
         for (const merch of merches) {
           const mediaGroup = merch.images.map((imagePath, index) => ({
-            type: "photo",
+            type: "photo" as const,
             media: imagePath,
             caption:
               index === 0
@@ -518,7 +518,7 @@ await mongoose
 
             for (const merch of merches) {
               const mediaGroup = merch.images.map((imagePath, index) => ({
-                type: "photo",
+                type: "photo" as const,
                 media: imagePath,
                 caption:
                   index === 0
