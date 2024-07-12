@@ -180,6 +180,22 @@ await mongoose
 
       const user = await User.findOne({ chatId });
 
+      if (text === "Мерч 🛒") {
+        const merches = await Merch.find({});
+
+        for (const merch of merches) {
+          const sentMessage = await bot.sendMessage(
+            chatId,
+            `${merch.name}\nЦена: ${merch.price}\nОписание: ${merch.description}`
+          );
+
+          for (const imagePath of merch.images) {
+            const sentImage = await bot.sendPhoto(chatId, imagePath);
+          }
+        }
+        return;
+      }
+
       if (user && user.authenticated) {
         if (text === "Logout") {
           await User.findOneAndUpdate(
@@ -597,151 +613,6 @@ await mongoose
 
             user.messageIds.push(sentMessage.message_id);
             await user.save();
-          }
-        } else {
-          if (text === "Видео Курсы 🎉") {
-            const lessons = await Lesson.find({}).sort({ lessonNumber: 1 });
-
-            for (const lesson of lessons) {
-              const inlineKeyboard =
-                lesson.subLessons?.map((subLesson) => [
-                  {
-                    text: subLesson.title,
-                    callback_data: JSON.stringify({
-                      lessonNumber: lesson.lessonNumber,
-                      subLessonNumber: subLesson.lessonNumber,
-                    }),
-                  },
-                ]) || [];
-
-              if (lesson.imageUrl) {
-                const sentMessage = await bot.sendPhoto(
-                  chatId,
-                  lesson.imageUrl,
-                  {
-                    caption: `Урок ${lesson.lessonNumber}: ${lesson.description}\n[Смотреть видео](${lesson.videoUrl})`,
-                    parse_mode: "Markdown",
-                    reply_markup: {
-                      inline_keyboard: inlineKeyboard,
-                    },
-                  }
-                );
-                user.messageIds.push(sentMessage.message_id);
-              } else {
-                const sentMessage = await bot.sendMessage(
-                  chatId,
-                  `Урок ${lesson.lessonNumber}: ${lesson.description}\n[Смотреть видео](${lesson.videoUrl})`,
-                  {
-                    parse_mode: "Markdown",
-                    reply_markup: {
-                      inline_keyboard: inlineKeyboard,
-                    },
-                  }
-                );
-                user.messageIds.push(sentMessage.message_id);
-              }
-            }
-            await user.save();
-          } else if (text === "Гайды 🥋") {
-            const sentMessage = await bot.sendMessage(
-              chatId,
-              "Выберите один из следующих гайдов:",
-              {
-                reply_markup: {
-                  keyboard: [
-                    [{ text: "Гайд по набору мышечной массы" }],
-                    [{ text: "Гайд по снижению веса" }],
-                    [{ text: "Гайд по подготовке к турниру" }],
-                  ],
-                  one_time_keyboard: true,
-                  resize_keyboard: true,
-                },
-              }
-            );
-
-            user.messageIds.push(sentMessage.message_id);
-            await user.save();
-          } else if (
-            text === "Гайд по набору мышечной массы" ||
-            text === "Гайд по снижению веса" ||
-            text === "Гайд по подготовке к турниру"
-          ) {
-            let filePath = "";
-            if (text === "Гайд по набору мышечной массы") {
-              filePath = path.join(
-                __dirname,
-                "assets",
-                "Гайд_по_набору_мышечной_массы_compressed.pdf"
-              );
-            } else if (text === "Гайд по снижению веса") {
-              filePath = path.join(
-                __dirname,
-                "assets",
-                "Гайд_по_снижению_веса_compressed.pdf"
-              );
-            } else if (text === "Гайд по подготовке к турниру") {
-              filePath = path.join(
-                __dirname,
-                "assets",
-                "Гайд_по_подготовке_к_турниру_compressed.pdf"
-              );
-            }
-
-            bot.sendChatAction(chatId, "upload_document");
-
-            bot
-              .sendDocument(chatId, filePath)
-              .then(() => {
-                bot.sendMessage(chatId, "Гайд отправлен!");
-              })
-              .catch((error) => {
-                bot.sendMessage(
-                  chatId,
-                  "Произошла ошибка при отправке гайда. Пожалуйста, попробуйте снова."
-                );
-                console.error(error);
-              });
-          } else if (text === "Плейлист 1") {
-            const imgPath = path.join(__dirname, "assets", "img1.jpg");
-            const sentMessage = await bot.sendPhoto(chatId, imgPath, {
-              caption: "Это плейлист 1. Выберите урок:",
-              reply_markup: {
-                inline_keyboard: [
-                  [{ text: "Урок 1", callback_data: "1" }],
-                  [{ text: "Урок 2", callback_data: "2" }],
-                ],
-              },
-            });
-
-            user.messageIds.push(sentMessage.message_id);
-            await user.save();
-          } else if (text === "Плейлист 2") {
-            const imgPath = path.join(__dirname, "assets", "img1.jpg");
-            const sentMessage = await bot.sendPhoto(chatId, imgPath, {
-              caption: "Это плейлист 2. Выберите урок:",
-              reply_markup: {
-                inline_keyboard: [
-                  [{ text: "Урок 1", callback_data: "3" }],
-                  [{ text: "Урок 2", callback_data: "4" }],
-                ],
-              },
-            });
-
-            user.messageIds.push(sentMessage.message_id);
-            await user.save();
-          } else if (text === "Мерч 🛒") {
-            const merches = await Merch.find({});
-
-            for (const merch of merches) {
-              const sentMessage = await bot.sendMessage(
-                chatId,
-                `${merch.name}\nЦена: ${merch.price}\nОписание: ${merch.description}`
-              );
-
-              for (const imagePath of merch.images) {
-                const sentImage = await bot.sendPhoto(chatId, imagePath);
-              }
-            }
           }
         }
       } else if (text === "Login") {
