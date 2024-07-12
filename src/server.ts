@@ -415,9 +415,10 @@ await mongoose
             user.messageIds.push(sentMessage.message_id);
             await user.save();
 
+            const imagePaths: string[] = [];
+
             bot.once("photo", async (msg: Message) => {
               const fileIds = msg.photo?.map((photo) => photo.file_id) || [];
-              const imagePaths: string[] = [];
               if (fileIds.length === 0) return;
 
               for (const fileId of fileIds) {
@@ -433,9 +434,11 @@ await mongoose
 
                 https.get(fileUrl, (response: any) => {
                   response.pipe(fileStream);
+                  fileStream.on("finish", () => {
+                    fileStream.close();
+                    imagePaths.push(localPath);
+                  });
                 });
-
-                imagePaths.push(localPath);
               }
 
               const sentMessage = await bot.sendMessage(
