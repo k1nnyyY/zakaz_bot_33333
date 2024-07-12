@@ -238,17 +238,18 @@ await mongoose
                     chatId,
                     sentMessage.message_id,
                     async (reply) => {
-                      const lessonData = reply.text?.split("\n");
+                      const lessonData = reply.text
+                        ?.split("\n")
+                        .map((item) => item.replace(/^\d+\)\s*/, "").trim());
                       console.log("Received lesson data:", lessonData); // Debug log
                       if (lessonData && lessonData.length >= 5) {
                         const newLesson = new Lesson({
-                          playlist: lessonData[0].trim(),
-                          lessonNumber: Number(lessonData[1].trim()),
-                          videoUrl: lessonData[2].trim(),
-                          description: lessonData[3].trim(),
+                          playlist: lessonData[0],
+                          lessonNumber: Number(lessonData[1]),
+                          videoUrl: lessonData[2],
+                          description: lessonData[3],
                           imageUrl: localPath,
-                          hasSubLessons:
-                            lessonData[4].trim().toLowerCase() === "да",
+                          hasSubLessons: lessonData[4].toLowerCase() === "да",
                         });
                         try {
                           await newLesson.save();
