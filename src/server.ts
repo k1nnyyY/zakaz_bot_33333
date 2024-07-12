@@ -102,21 +102,6 @@ await mongoose
       return passwords.includes(password.trim());
     }
 
-    async function clearPreviousMessages(chatId: number) {
-      const user = await User.findOne({ chatId });
-      if (user && user.messageIds.length > 0) {
-        for (const messageId of user.messageIds) {
-          try {
-            await bot.deleteMessage(chatId, Number(messageId)); // Приведение типа messageId к числу
-          } catch (error) {
-            console.error(`Failed to delete message ${messageId}:`, error);
-          }
-        }
-        user.messageIds = [];
-        await user.save();
-      }
-    }
-
     bot.onText(/\/start/, async (msg: Message) => {
       const chatId = msg.chat.id;
 
@@ -177,7 +162,6 @@ await mongoose
             { chatId },
             { authenticated: false, isAdmin: false }
           );
-          await clearPreviousMessages(chatId);
           const sentMessage = await bot.sendMessage(
             chatId,
             "Вы успешно вышли из системы.",
@@ -194,7 +178,6 @@ await mongoose
           await user.save();
         } else if (user.isAdmin) {
           if (text === "Управление уроками 📚") {
-            await clearPreviousMessages(chatId);
             const sentMessage = await bot.sendMessage(
               chatId,
               "Выберите действие:",
@@ -267,7 +250,6 @@ await mongoose
                             lessonData[4].trim().toLowerCase() === "да",
                         });
                         await newLesson.save();
-                        await clearPreviousMessages(chatId);
                         await bot.sendMessage(chatId, "Урок добавлен.");
                       } else {
                         await bot.sendMessage(
@@ -281,7 +263,6 @@ await mongoose
               });
             });
           } else if (text === "Удалить урок") {
-            await clearPreviousMessages(chatId);
             const sentMessage = await bot.sendMessage(
               chatId,
               "Введите номер урока для удаления:",
@@ -304,7 +285,6 @@ await mongoose
                   await Lesson.deleteOne({
                     lessonNumber: Number(lessonNumber),
                   });
-                  await clearPreviousMessages(chatId);
                   await bot.sendMessage(chatId, "Урок удален.");
                 } else {
                   await bot.sendMessage(
@@ -315,7 +295,6 @@ await mongoose
               }
             );
           } else if (text === "Просмотреть уроки") {
-            await clearPreviousMessages(chatId);
             const lessons = await Lesson.find({}).sort({ lessonNumber: 1 });
 
             for (const lesson of lessons) {
@@ -359,7 +338,6 @@ await mongoose
             }
             await user.save();
           } else if (text === "Управление паролями 🛠") {
-            await clearPreviousMessages(chatId);
             const sentMessage = await bot.sendMessage(
               chatId,
               "Выберите действие:",
@@ -401,7 +379,6 @@ await mongoose
                   path.join(__dirname, "../passwords.txt"),
                   `\n${newPass}`
                 );
-                await clearPreviousMessages(chatId);
                 await bot.sendMessage(chatId, "Пароль добавлен.");
               }
             });
@@ -423,12 +400,10 @@ await mongoose
                   .map((p) => p.trim());
                 const updatedPasswords = passwords.filter((p) => p !== delPass);
                 fs.writeFileSync(filePath, updatedPasswords.join("\n"));
-                await clearPreviousMessages(chatId);
                 await bot.sendMessage(chatId, "Пароль удален.");
               }
             });
           } else if (text === "Назад") {
-            await clearPreviousMessages(chatId);
             const sentMessage = await bot.sendMessage(
               chatId,
               "Выберите раздел.",
@@ -455,7 +430,6 @@ await mongoose
           }
         } else {
           if (text === "Видео Курсы 🎉") {
-            await clearPreviousMessages(chatId);
             const lessons = await Lesson.find({}).sort({ lessonNumber: 1 });
 
             for (const lesson of lessons) {
