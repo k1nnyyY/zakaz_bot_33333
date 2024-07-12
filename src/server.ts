@@ -47,6 +47,22 @@ const LessonSchema: Schema = new Schema({
 
 const Lesson = mongoose.model<ILesson>("Lesson", LessonSchema);
 
+interface IMerch extends Document {
+  name: string;
+  price: number;
+  description: string;
+  images: string[];
+}
+
+const MerchSchema: Schema = new Schema({
+  name: { type: String, required: true },
+  price: { type: Number, required: true },
+  description: { type: String, required: true },
+  images: { type: [String], required: true },
+});
+
+const Merch = mongoose.model<IMerch>("Merch", MerchSchema);
+
 interface IUser extends Document {
   chatId: number;
   authenticated: boolean;
@@ -114,6 +130,7 @@ await mongoose
         const keyboard = user.isAdmin
           ? [
               [{ text: "Управление уроками 📚" }],
+              [{ text: "Управление мерчем 🛒" }],
               [{ text: "Управление паролями 🛠" }],
               [{ text: "Logout" }],
             ]
@@ -123,6 +140,7 @@ await mongoose
               [{ text: "Отзывы 💬" }],
               [{ text: "Помощь 🚨" }],
               [{ text: "Как работать с ботом ❓" }],
+              [{ text: "Мерч 🛒" }],
               [{ text: "Logout" }],
             ];
 
@@ -142,7 +160,7 @@ await mongoose
           "Добро пожаловать! Пожалуйста, нажмите кнопку Login для входа.",
           {
             reply_markup: {
-              keyboard: [[{ text: "Login" }]],
+              keyboard: [[{ text: "Login" }, { text: "Мерч 🛒" }]],
               one_time_keyboard: true,
               resize_keyboard: true,
             },
@@ -173,7 +191,7 @@ await mongoose
             "Вы успешно вышли из системы.",
             {
               reply_markup: {
-                keyboard: [[{ text: "Login" }]],
+                keyboard: [[{ text: "Login" }, { text: "Мерч 🛒" }]],
                 one_time_keyboard: true,
                 resize_keyboard: true,
               },
@@ -247,7 +265,6 @@ await mongoose
                       const lessonData = reply.text
                         ?.split("\n")
                         .map((item) => item.replace(/^\d+\)\s*/, "").trim());
-                      console.log("Received lesson data:", lessonData); // Debug log
                       if (lessonData && lessonData.length >= 5) {
                         const newLesson = new Lesson({
                           playlist: lessonData[0],
@@ -260,9 +277,7 @@ await mongoose
                         try {
                           await newLesson.save();
                           await bot.sendMessage(chatId, "Урок добавлен.");
-                          console.log("Lesson added successfully:", newLesson); // Debug log
                         } catch (error) {
-                          console.error("Error saving lesson:", error); // Debug log
                           await bot.sendMessage(
                             chatId,
                             "Произошла ошибка при добавлении урока."
@@ -354,6 +369,148 @@ await mongoose
               }
             }
             await user.save();
+          } else if (text === "Управление мерчем 🛒") {
+            const sentMessage = await bot.sendMessage(
+              chatId,
+              "Выберите действие:",
+              {
+                reply_markup: {
+                  keyboard: [
+                    [{ text: "Добавить мерч" }],
+                    [{ text: "Удалить мерч" }],
+                    [{ text: "Просмотреть мерч" }],
+                    [{ text: "Назад" }],
+                  ],
+                  one_time_keyboard: true,
+                  resize_keyboard: true,
+                },
+              }
+            );
+
+            user.messageIds.push(sentMessage.message_id);
+            await user.save();
+          } else if (text === "Добавить мерч") {
+            const sentMessage = await bot.sendMessage(
+              chatId,
+              "Пожалуйста, отправьте картинки для мерча (до 3 картинок)."
+            );
+            user.messageIds.push(sentMessage.message_id);
+            await user.save();
+
+            bot.once("photo", async (msg: Message) => {
+              const fileIds = msg.photo?.map((photo) => photo.file_id);
+              if (!fileIds || fileIds.length === 0) return;
+
+              const imagePaths = [];
+              for (const fileId of fileIds) {
+                const file = await bot.getFile(fileId);
+                const filePath = file.file_path;
+                if (!filePath) continue;
+                const fileUrl = `https://api.telegram.org/file/bot${TOKEN}/${filePath}`;
+                const localPath = path.join(
+                  imagesPath,
+                  path.basename(filePath)
+                );
+                const fileStream = fs.createWriteStream(localPath);
+
+                https.get(fileUrl, (response: any) => {
+                  response.pipe(fileStream);
+                });
+
+                imagePaths.push(localPath);
+              }
+
+              const sentMessage = await bot.sendMessage(
+                chatId,
+                "Теперь введите данные мерча в формате:\n1) Название\n2) Цена\n3) Описание",
+                {
+                  reply_markup: {
+                    force_reply: true,
+                  },
+                }
+              );
+
+              user.messageIds.push(sentMessage.message_id);
+              await user.save();
+
+              bot.onReplyToMessage(
+                chatId,
+                sentMessage.message_id,
+                async (reply) => {
+                  const merchData = reply.text
+                    ?.split("\n")
+                    .map((item) => item.replace(/^\d+\)\s*/, "").trim());
+                  if (merchData && merchData.length >= 3) {
+                    const newMerch = new Merch({
+                      name: merchData[0],
+                      price: Number(merchData[1]),
+                      description: merchData[2],
+                      images: imagePaths,
+                    });
+                    try {
+                      await newMerch.save();
+                      await bot.sendMessage(chatId, "Мерч добавлен.");
+                    } catch (error) {
+                      await bot.sendMessage(
+                        chatId,
+                        "Произошла ошибка при добавлении мерча."
+                      );
+                    }
+                  } else {
+                    await bot.sendMessage(
+                      chatId,
+                      "Неверный формат данных. Попробуйте снова."
+                    );
+                  }
+                }
+              );
+            });
+          } else if (text === "Удалить мерч") {
+            const sentMessage = await bot.sendMessage(
+              chatId,
+              "Введите название мерча для удаления:",
+              {
+                reply_markup: {
+                  force_reply: true,
+                },
+              }
+            );
+
+            user.messageIds.push(sentMessage.message_id);
+            await user.save();
+
+            bot.onReplyToMessage(
+              chatId,
+              sentMessage.message_id,
+              async (reply) => {
+                const merchName = reply.text?.trim();
+                if (merchName) {
+                  await Merch.deleteOne({ name: merchName });
+                  await bot.sendMessage(chatId, "Мерч удален.");
+                } else {
+                  await bot.sendMessage(
+                    chatId,
+                    "Неверное название мерча. Попробуйте снова."
+                  );
+                }
+              }
+            );
+          } else if (text === "Просмотреть мерч") {
+            const merches = await Merch.find({});
+
+            for (const merch of merches) {
+              const sentMessage = await bot.sendMessage(
+                chatId,
+                `${merch.name}\nЦена: ${merch.price}\nОписание: ${merch.description}`
+              );
+              user.messageIds.push(sentMessage.message_id);
+
+              for (const imagePath of merch.images) {
+                const sentImage = await bot.sendPhoto(chatId, imagePath);
+                user.messageIds.push(sentImage.message_id);
+              }
+            }
+            await user.save();
           } else if (text === "Управление паролями 🛠") {
             const sentMessage = await bot.sendMessage(
               chatId,
@@ -428,6 +585,7 @@ await mongoose
                 reply_markup: {
                   keyboard: [
                     [{ text: "Управление уроками 📚" }],
+                    [{ text: "Управление мерчем 🛒" }],
                     [{ text: "Управление паролями 🛠" }],
                     [{ text: "Logout" }],
                   ],
@@ -571,6 +729,22 @@ await mongoose
 
             user.messageIds.push(sentMessage.message_id);
             await user.save();
+          } else if (text === "Мерч 🛒") {
+            const merches = await Merch.find({});
+
+            for (const merch of merches) {
+              const sentMessage = await bot.sendMessage(
+                chatId,
+                `${merch.name}\nЦена: ${merch.price}\nОписание: ${merch.description}`
+              );
+              user.messageIds.push(sentMessage.message_id);
+
+              for (const imagePath of merch.images) {
+                const sentImage = await bot.sendPhoto(chatId, imagePath);
+                user.messageIds.push(sentImage.message_id);
+              }
+            }
+            await user.save();
           }
         }
       } else if (text === "Login") {
@@ -600,6 +774,7 @@ await mongoose
                 [{ text: "Отзывы 💬" }],
                 [{ text: "Помощь 🚨" }],
                 [{ text: "Как работать с ботом ❓" }],
+                [{ text: "Мерч 🛒" }],
                 [{ text: "Logout" }],
               ],
               one_time_keyboard: true,
@@ -626,6 +801,7 @@ await mongoose
             reply_markup: {
               keyboard: [
                 [{ text: "Управление уроками 📚" }],
+                [{ text: "Управление мерчем 🛒" }],
                 [{ text: "Управление паролями 🛠" }],
                 [{ text: "Logout" }],
               ],
