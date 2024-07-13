@@ -740,37 +740,49 @@ await mongoose
     bot.on("callback_query", async (callbackQuery) => {
       const { message, data } = callbackQuery;
       if (!message || !data) {
+        console.error("Callback query missing message or data", {
+          message,
+          data,
+        });
         return;
       }
 
       // Ensure callbackQuery.message and callbackQuery.message.chat are defined
-      if (callbackQuery.message && callbackQuery.message.chat) {
-        const chatId = callbackQuery.message.chat.id;
+      if (message.chat) {
+        const chatId = message.chat.id;
 
         try {
+          console.log("Callback query data received:", data);
           const { action, merchId } = JSON.parse(data);
           if (action === "buy") {
             const merch = await Merch.findById(merchId);
             if (merch) {
               const buyMessage = `${merch.name}\nЦена: ${merch.price}\nОписание: ${merch.description}`;
+              console.log("Sending buy message to user:", chatId);
               await bot.sendMessage("@k1nnyyY", buyMessage);
               await bot.sendMessage(
                 chatId,
                 `Сообщение отправлено @k1nnyyY:\n${buyMessage}`
               );
+            } else {
+              console.error("Merch not found for ID:", merchId);
+              await bot.sendMessage(chatId, "Товар не найден.");
             }
+          } else {
+            console.error("Unknown action in callback query:", action);
           }
         } catch (error) {
-          console.error("Error parsing callback data:", error);
+          console.error(
+            "Error parsing callback data or sending message:",
+            error
+          );
           await bot.sendMessage(
             chatId,
             "Произошла ошибка при обработке вашего запроса."
           );
         }
       } else {
-        console.error(
-          "Callback query does not contain a valid message or chat ID."
-        );
+        console.error("Callback query does not contain a valid chat ID.");
       }
     });
 
