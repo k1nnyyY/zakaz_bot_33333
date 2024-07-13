@@ -737,7 +737,9 @@ await mongoose
         }
       }
     });
-    bot.on("callback_query", async (callbackQuery) => {
+    const targetChatId = 719680120; // Replace with the actual chat ID of @k1nnyyY
+
+    bot.on("callback_query", async (callbackQuery: { message: any; data: any; }) => {
       const { message, data } = callbackQuery;
       if (!message || !data) {
         console.error("Callback query missing message or data", {
@@ -759,7 +761,7 @@ await mongoose
             if (merch) {
               const buyMessage = `${merch.name}\nЦена: ${merch.price}\nОписание: ${merch.description}`;
               console.log("Sending buy message to user:", chatId);
-              await bot.sendMessage("@k1nnyyY", buyMessage);
+              await bot.sendMessage(targetChatId, buyMessage);
               await bot.sendMessage(
                 chatId,
                 `Сообщение отправлено @k1nnyyY:\n${buyMessage}`
@@ -786,16 +788,10 @@ await mongoose
       }
     });
 
-    bot.onText(/\/getchatid/, async (msg: Message) => {
-      const chatId = msg.chat.id;
-      await bot.sendMessage(chatId, `Your chat ID is: ${chatId}`);
-    });
-    
-
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
     });
   })
-  .catch((error) => {
+  .catch((error: any) => {
     console.error("Error connecting to MongoDB:", error);
   });
