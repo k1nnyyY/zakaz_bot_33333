@@ -737,31 +737,39 @@ await mongoose
         }
       }
     });
-
     bot.on("callback_query", async (callbackQuery) => {
       const { message, data } = callbackQuery;
       if (!message || !data) {
         return;
       }
 
-      try {
-        const { action, merchId } = JSON.parse(data);
-        if (action === "buy") {
-          const merch = await Merch.findById(merchId);
-          if (merch) {
-            const buyMessage = `${merch.name}\nЦена: ${merch.price}\nОписание: ${merch.description}`;
-            await bot.sendMessage("@k1nnyyY", buyMessage);
-            await bot.sendMessage(
-              message.chat.id,
-              `Сообщение отправлено @k1nnyyY:\n${buyMessage}`
-            );
+      // Ensure callbackQuery.message and callbackQuery.message.chat are defined
+      if (callbackQuery.message && callbackQuery.message.chat) {
+        const chatId = callbackQuery.message.chat.id;
+
+        try {
+          const { action, merchId } = JSON.parse(data);
+          if (action === "buy") {
+            const merch = await Merch.findById(merchId);
+            if (merch) {
+              const buyMessage = `${merch.name}\nЦена: ${merch.price}\nОписание: ${merch.description}`;
+              await bot.sendMessage("@k1nnyyY", buyMessage);
+              await bot.sendMessage(
+                chatId,
+                `Сообщение отправлено @k1nnyyY:\n${buyMessage}`
+              );
+            }
           }
+        } catch (error) {
+          console.error("Error parsing callback data:", error);
+          await bot.sendMessage(
+            chatId,
+            "Произошла ошибка при обработке вашего запроса."
+          );
         }
-      } catch (error) {
-        console.error("Error parsing callback data:", error);
-        await bot.sendMessage(
-          callbackQuery.message?.chat.id,
-          "Произошла ошибка при обработке вашего запроса."
+      } else {
+        console.error(
+          "Callback query does not contain a valid message or chat ID."
         );
       }
     });
