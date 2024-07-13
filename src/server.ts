@@ -1,6 +1,6 @@
 import express from "express";
 import bodyParser from "body-parser";
-import TelegramBot, { Message } from "node-telegram-bot-api";
+import TelegramBot, { Message, CallbackQuery } from "node-telegram-bot-api"; // <-- Import CallbackQuery
 import fs from "fs";
 import path from "path";
 import mongoose, { Schema, Document } from "mongoose";
@@ -737,9 +737,9 @@ await mongoose
         }
       }
     });
-    const targetChatId = 719680120; // Replace with the actual chat ID of @k1nnyyY
 
-    bot.on("callback_query", async (callbackQuery: { message: any; data: any; }) => {
+    bot.on("callback_query", async (callbackQuery: CallbackQuery) => {
+      // <-- Correct type here
       const { message, data } = callbackQuery;
       if (!message || !data) {
         console.error("Callback query missing message or data", {
@@ -761,7 +761,7 @@ await mongoose
             if (merch) {
               const buyMessage = `${merch.name}\nЦена: ${merch.price}\nОписание: ${merch.description}`;
               console.log("Sending buy message to user:", chatId);
-              await bot.sendMessage(targetChatId, buyMessage);
+              await bot.sendMessage(123456789, buyMessage); // Use actual chat ID
               await bot.sendMessage(
                 chatId,
                 `Сообщение отправлено @k1nnyyY:\n${buyMessage}`
@@ -792,6 +792,6 @@ await mongoose
       console.log(`Server is running on port ${PORT}`);
     });
   })
-  .catch((error: any) => {
+  .catch((error) => {
     console.error("Error connecting to MongoDB:", error);
   });
