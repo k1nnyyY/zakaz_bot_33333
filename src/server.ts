@@ -742,8 +742,11 @@ await mongoose
           const merch = await Merch.findById(merchId);
           if (merch) {
             const buyMessage = `${merch.name}\nЦена: ${merch.price}\nОписание: ${merch.description}`;
-            await bot.sendMessage(message.chat.id, buyMessage);
             await bot.sendMessage("@k1nnyyY", buyMessage);
+            await bot.sendMessage(
+              message.chat.id,
+              `Сообщение отправлено @k1nnyyY:\n${buyMessage}`
+            );
           }
         }
       } catch (error) {
