@@ -207,7 +207,11 @@ await mongoose
           );
 
           for (const imagePath of merch.images) {
-            await bot.sendPhoto(chatId, imagePath);
+            try {
+              await bot.sendPhoto(chatId, imagePath);
+            } catch (error) {
+              console.error("Error sending photo:", error);
+            }
           }
         }
         return;
@@ -557,7 +561,11 @@ await mongoose
               );
 
               for (const imagePath of merch.images) {
-                await bot.sendPhoto(chatId, imagePath);
+                try {
+                  await bot.sendPhoto(chatId, imagePath);
+                } catch (error) {
+                  console.error("Error sending photo:", error);
+                }
               }
               user.messageIds.push(sentMessage.message_id);
             }
@@ -750,7 +758,11 @@ await mongoose
           }
         }
       } catch (error) {
-        console.error("Error parsing callback data: ", error);
+        console.error("Error parsing callback data:", error);
+        await bot.sendMessage(
+          callbackQuery.message?.chat.id,
+          "Произошла ошибка при обработке вашего запроса."
+        );
       }
     });
 
@@ -758,4 +770,6 @@ await mongoose
       console.log(`Server is running on port ${PORT}`);
     });
   })
-  .catch((error) => console.log(error));
+  .catch((error) => {
+    console.error("Error connecting to MongoDB:", error);
+  });
