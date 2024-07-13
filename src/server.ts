@@ -786,6 +786,12 @@ await mongoose
       }
     });
 
+    bot.onText(/\/getchatid/, async (msg: Message) => {
+      const chatId = msg.chat.id;
+      await bot.sendMessage(chatId, `Your chat ID is: ${chatId}`);
+    });
+    
+
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
     });
