@@ -1,6 +1,6 @@
 import express from "express";
 import bodyParser from "body-parser";
-import TelegramBot, { Message, CallbackQuery } from "node-telegram-bot-api"; // <-- Import CallbackQuery
+import TelegramBot, { Message, CallbackQuery } from "node-telegram-bot-api";
 import fs from "fs";
 import path from "path";
 import mongoose, { Schema, Document } from "mongoose";
@@ -196,23 +196,24 @@ await mongoose
             ],
           ];
 
+          let imagesText = merch.images.map(
+            (imagePath) => `[Фото](${imagePath})`
+          );
+
           const sentMessage = await bot.sendMessage(
             chatId,
-            `${merch.name}\nЦена: ${merch.price}\nОписание: ${merch.description}`,
+            `${merch.name}\nЦена: ${merch.price}\nОписание: ${
+              merch.description
+            }\n${imagesText.join("\n")}`,
             {
               reply_markup: {
                 inline_keyboard: inlineKeyboard,
               },
+              parse_mode: "Markdown",
             }
           );
 
-          for (const imagePath of merch.images) {
-            try {
-              await bot.sendPhoto(chatId, imagePath);
-            } catch (error) {
-              console.error("Error sending photo:", error);
-            }
-          }
+          user.messageIds.push(sentMessage.message_id);
         }
         return;
       }
@@ -550,23 +551,23 @@ await mongoose
                 ],
               ];
 
+              let imagesText = merch.images.map(
+                (imagePath) => `[Фото](${imagePath})`
+              );
+
               const sentMessage = await bot.sendMessage(
                 chatId,
-                `${merch.name}\nЦена: ${merch.price}\nОписание: ${merch.description}`,
+                `${merch.name}\nЦена: ${merch.price}\nОписание: ${
+                  merch.description
+                }\n${imagesText.join("\n")}`,
                 {
                   reply_markup: {
                     inline_keyboard: inlineKeyboard,
                   },
+                  parse_mode: "Markdown",
                 }
               );
 
-              for (const imagePath of merch.images) {
-                try {
-                  await bot.sendPhoto(chatId, imagePath);
-                } catch (error) {
-                  console.error("Error sending photo:", error);
-                }
-              }
               user.messageIds.push(sentMessage.message_id);
             }
             await user.save();
@@ -739,7 +740,6 @@ await mongoose
     });
 
     bot.on("callback_query", async (callbackQuery: CallbackQuery) => {
-      // <-- Correct type here
       const { message, data } = callbackQuery;
       if (!message || !data) {
         console.error("Callback query missing message or data", {
@@ -749,42 +749,25 @@ await mongoose
         return;
       }
 
-      // Ensure callbackQuery.message and callbackQuery.message.chat are defined
-      if (message.chat) {
-        const chatId = message.chat.id;
+      const chatId = message.chat.id;
 
-        try {
-          console.log("Callback query data received:", data);
-          const { action, merchId } = JSON.parse(data);
-          if (action === "buy") {
-            const merch = await Merch.findById(merchId);
-            if (merch) {
-              const buyMessage = `${merch.name}\nЦена: ${merch.price}\nОписание: ${merch.description}`;
-              console.log("Sending buy message to user:", chatId);
-              await bot.sendMessage(123456789, buyMessage); // Use actual chat ID
-              await bot.sendMessage(
-                chatId,
-                `Сообщение отправлено @k1nnyyY:\n${buyMessage}`
-              );
-            } else {
-              console.error("Merch not found for ID:", merchId);
-              await bot.sendMessage(chatId, "Товар не найден.");
-            }
+      try {
+        const { action, merchId } = JSON.parse(data);
+        if (action === "buy") {
+          const merch = await Merch.findById(merchId);
+          if (merch) {
+            const buyMessage = `Перешлите это сообщение Марату Курбанову:\n${merch.name}\nЦена: ${merch.price}\nОписание: ${merch.description}`;
+            await bot.sendMessage(chatId, buyMessage);
           } else {
-            console.error("Unknown action in callback query:", action);
+            await bot.sendMessage(chatId, "Товар не найден.");
           }
-        } catch (error) {
-          console.error(
-            "Error parsing callback data or sending message:",
-            error
-          );
-          await bot.sendMessage(
-            chatId,
-            "Произошла ошибка при обработке вашего запроса."
-          );
         }
-      } else {
-        console.error("Callback query does not contain a valid chat ID.");
+      } catch (error) {
+        console.error("Error parsing callback data or sending message:", error);
+        await bot.sendMessage(
+          chatId,
+          "Произошла ошибка при обработке вашего запроса."
+        );
       }
     });
 
