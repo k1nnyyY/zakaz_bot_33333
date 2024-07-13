@@ -1,9 +1,6 @@
 import express from "express";
 import bodyParser from "body-parser";
-import TelegramBot, {
-  Message,
-  InlineKeyboardButton,
-} from "node-telegram-bot-api";
+import TelegramBot, { Message } from "node-telegram-bot-api";
 import fs from "fs";
 import path from "path";
 import mongoose, { Schema, Document } from "mongoose";
@@ -51,7 +48,6 @@ const LessonSchema: Schema = new Schema({
 const Lesson = mongoose.model<ILesson>("Lesson", LessonSchema);
 
 interface IMerch extends Document {
-  merchId: string;
   name: string;
   price: number;
   description: string;
@@ -59,7 +55,6 @@ interface IMerch extends Document {
 }
 
 const MerchSchema: Schema = new Schema({
-  merchId: { type: String, required: true, unique: true },
   name: { type: String, required: true },
   price: { type: Number, required: true },
   description: { type: String, required: true },
@@ -189,29 +184,14 @@ await mongoose
         const merches = await Merch.find({});
 
         for (const merch of merches) {
-          const mediaGroup = merch.images.map((imagePath, index) => ({
-            type: "photo" as const,
-            media: imagePath,
-            caption:
-              index === 0
-                ? `ID: ${merch.merchId}\n${merch.name}\nЦена: ${merch.price}\nОписание: ${merch.description}`
-                : undefined,
-          }));
+          const sentMessage = await bot.sendMessage(
+            chatId,
+            `${merch.name}\nЦена: ${merch.price}\nОписание: ${merch.description}`
+          );
 
-          await bot.sendMediaGroup(chatId, mediaGroup);
-
-          const sizeKeyboard: InlineKeyboardButton[][] = [
-            [{ text: "S", callback_data: `buy_${merch.merchId}_S` }],
-            [{ text: "M", callback_data: `buy_${merch.merchId}_M` }],
-            [{ text: "L", callback_data: `buy_${merch.merchId}_L` }],
-            [{ text: "XL", callback_data: `buy_${merch.merchId}_XL` }],
-          ];
-
-          await bot.sendMessage(chatId, "Выберите размер:", {
-            reply_markup: {
-              inline_keyboard: sizeKeyboard,
-            },
-          });
+          for (const imagePath of merch.images) {
+            const sentImage = await bot.sendPhoto(chatId, imagePath);
+          }
         }
         return;
       }
@@ -298,16 +278,17 @@ await mongoose
                     chatId,
                     sentMessage.message_id,
                     async (reply) => {
-                      const lessonData = reply.text?.split("\n");
+                      const lessonData = reply.text
+                        ?.split("\n")
+                        .map((item) => item.replace(/^\d+\)\s*/, "").trim());
                       if (lessonData && lessonData.length >= 5) {
                         const newLesson = new Lesson({
-                          playlist: lessonData[0].trim(),
-                          lessonNumber: Number(lessonData[1].trim()),
-                          videoUrl: lessonData[2].trim(),
-                          description: lessonData[3].trim(),
+                          playlist: lessonData[0],
+                          lessonNumber: Number(lessonData[1]),
+                          videoUrl: lessonData[2],
+                          description: lessonData[3],
                           imageUrl: localPath,
-                          hasSubLessons:
-                            lessonData[4].trim().toLowerCase() === "да",
+                          hasSubLessons: lessonData[4].toLowerCase() === "да",
                         });
                         try {
                           await newLesson.save();
@@ -432,10 +413,9 @@ await mongoose
             user.messageIds.push(sentMessage.message_id);
             await user.save();
 
-            const imagePaths: string[] = [];
-
             bot.once("photo", async (msg: Message) => {
               const fileIds = msg.photo?.map((photo) => photo.file_id) || [];
+              const imagePaths: string[] = [];
               if (fileIds.length === 0) return;
 
               for (const fileId of fileIds) {
@@ -451,11 +431,9 @@ await mongoose
 
                 https.get(fileUrl, (response: any) => {
                   response.pipe(fileStream);
-                  fileStream.on("finish", () => {
-                    fileStream.close();
-                    imagePaths.push(localPath);
-                  });
                 });
+
+                imagePaths.push(localPath);
               }
 
               const sentMessage = await bot.sendMessage(
@@ -479,9 +457,7 @@ await mongoose
                     ?.split("\n")
                     .map((item) => item.replace(/^\d+\)\s*/, "").trim());
                   if (merchData && merchData.length >= 3) {
-                    const newMerchId = (await Merch.countDocuments()) + 1;
                     const newMerch = new Merch({
-                      merchId: newMerchId.toString().padStart(3, "0"),
                       name: merchData[0],
                       price: Number(merchData[1]),
                       description: merchData[2],
@@ -539,29 +515,16 @@ await mongoose
             const merches = await Merch.find({});
 
             for (const merch of merches) {
-              const mediaGroup = merch.images.map((imagePath, index) => ({
-                type: "photo" as const,
-                media: imagePath,
-                caption:
-                  index === 0
-                    ? `ID: ${merch.merchId}\n${merch.name}\nЦена: ${merch.price}\nОписание: ${merch.description}`
-                    : undefined,
-              }));
+              const sentMessage = await bot.sendMessage(
+                chatId,
+                `${merch.name}\nЦена: ${merch.price}\nОписание: ${merch.description}`
+              );
+              user.messageIds.push(sentMessage.message_id);
 
-              await bot.sendMediaGroup(chatId, mediaGroup);
-
-              const sizeKeyboard: InlineKeyboardButton[][] = [
-                [{ text: "S", callback_data: `buy_${merch.merchId}_S` }],
-                [{ text: "M", callback_data: `buy_${merch.merchId}_M` }],
-                [{ text: "L", callback_data: `buy_${merch.merchId}_L` }],
-                [{ text: "XL", callback_data: `buy_${merch.merchId}_XL` }],
-              ];
-
-              await bot.sendMessage(chatId, "Выберите размер:", {
-                reply_markup: {
-                  inline_keyboard: sizeKeyboard,
-                },
-              });
+              for (const imagePath of merch.images) {
+                const sentImage = await bot.sendPhoto(chatId, imagePath);
+                user.messageIds.push(sentImage.message_id);
+              }
             }
             await user.save();
           } else if (text === "Управление паролями 🛠") {
@@ -637,12 +600,9 @@ await mongoose
               {
                 reply_markup: {
                   keyboard: [
-                    [{ text: "Видео Курсы 🎉" }],
-                    [{ text: "Гайды 🥋" }],
-                    [{ text: "Отзывы 💬" }],
-                    [{ text: "Помощь 🚨" }],
-                    [{ text: "Как работать с ботом ❓" }],
-                    [{ text: "Мерч 🛒" }],
+                    [{ text: "Управление уроками 📚" }],
+                    [{ text: "Управление мерчем 🛒" }],
+                    [{ text: "Управление паролями 🛠" }],
                     [{ text: "Logout" }],
                   ],
                   one_time_keyboard: true,
@@ -654,152 +614,111 @@ await mongoose
             user.messageIds.push(sentMessage.message_id);
             await user.save();
           }
-        } else {
-          if (text === "Видео Курсы 🎉") {
-            const lessons = await Lesson.find({}).sort({ lessonNumber: 1 });
+        }
+      } else if (text === "Login") {
+        const sentMessage = await bot.sendMessage(
+          chatId,
+          "Пожалуйста, введите ваш пароль."
+        );
+        if (user) {
+          user.messageIds.push(sentMessage.message_id);
+          await user.save();
+        }
+      } else if (text && checkPassword(text)) {
+        await User.findOneAndUpdate(
+          { chatId },
+          { authenticated: true, isAdmin: false },
+          { upsert: true, new: true }
+        );
 
-            for (const lesson of lessons) {
-              const inlineKeyboard =
-                lesson.subLessons?.map((subLesson) => [
-                  {
-                    text: subLesson.title,
-                    callback_data: JSON.stringify({
-                      lessonNumber: lesson.lessonNumber,
-                      subLessonNumber: subLesson.lessonNumber,
-                    }),
-                  },
-                ]) || [];
-
-              if (lesson.imageUrl) {
-                const sentMessage = await bot.sendPhoto(
-                  chatId,
-                  lesson.imageUrl,
-                  {
-                    caption: `Урок ${lesson.lessonNumber}: ${lesson.description}\n[Смотреть видео](${lesson.videoUrl})`,
-                    parse_mode: "Markdown",
-                    reply_markup: {
-                      inline_keyboard: inlineKeyboard,
-                    },
-                  }
-                );
-                user.messageIds.push(sentMessage.message_id);
-              } else {
-                const sentMessage = await bot.sendMessage(
-                  chatId,
-                  `Урок ${lesson.lessonNumber}: ${lesson.description}\n[Смотреть видео](${lesson.videoUrl})`,
-                  {
-                    parse_mode: "Markdown",
-                    reply_markup: {
-                      inline_keyboard: inlineKeyboard,
-                    },
-                  }
-                );
-                user.messageIds.push(sentMessage.message_id);
-              }
-            }
-            await user.save();
-          } else if (text === "Гайды 🥋") {
-            const sentMessage = await bot.sendMessage(
-              chatId,
-              "Выберите один из следующих гайдов:",
-              {
-                reply_markup: {
-                  keyboard: [
-                    [{ text: "Гайд по набору мышечной массы" }],
-                    [{ text: "Гайд по снижению веса" }],
-                    [{ text: "Гайд по подготовке к турниру" }],
-                  ],
-                  one_time_keyboard: true,
-                  resize_keyboard: true,
-                },
-              }
-            );
-
-            user.messageIds.push(sentMessage.message_id);
-            await user.save();
-          } else if (
-            text === "Гайд по набору мышечной массы" ||
-            text === "Гайд по снижению веса" ||
-            text === "Гайд по подготовке к турниру"
-          ) {
-            let filePath = "";
-            if (text === "Гайд по набору мышечной массы") {
-              filePath = path.join(
-                __dirname,
-                "assets",
-                "Гайд_по_набору_мышечной_массы_compressed.pdf"
-              );
-            } else if (text === "Гайд по снижению веса") {
-              filePath = path.join(
-                __dirname,
-                "assets",
-                "Гайд_по_снижению_веса_compressed.pdf"
-              );
-            } else if (text === "Гайд по подготовке к турниру") {
-              filePath = path.join(
-                __dirname,
-                "assets",
-                "Гайд_по_подготовке_к_турниру_compressed.pdf"
-              );
-            }
-
-            bot.sendChatAction(chatId, "upload_document");
-
-            bot
-              .sendDocument(chatId, filePath)
-              .then(() => {
-                bot.sendMessage(chatId, "Гайд отправлен!");
-              })
-              .catch((error) => {
-                bot.sendMessage(
-                  chatId,
-                  "Произошла ошибка при отправке гайда. Пожалуйста, попробуйте снова."
-                );
-                console.error(error);
-              });
+        const sentMessage = await bot.sendMessage(
+          chatId,
+          "Пароль верный! Выберите раздел.",
+          {
+            reply_markup: {
+              keyboard: [
+                [{ text: "Видео Курсы 🎉" }],
+                [{ text: "Гайды 🥋" }],
+                [{ text: "Отзывы 💬" }],
+                [{ text: "Помощь 🚨" }],
+                [{ text: "Как работать с ботом ❓" }],
+                [{ text: "Мерч 🛒" }],
+                [{ text: "Logout" }],
+              ],
+              one_time_keyboard: true,
+              resize_keyboard: true,
+            },
           }
+        );
+
+        if (user) {
+          user.messageIds.push(sentMessage.message_id);
+          await user.save();
+        }
+      } else if (text && checkAdminPassword(text)) {
+        await User.findOneAndUpdate(
+          { chatId },
+          { authenticated: true, isAdmin: true },
+          { upsert: true, new: true }
+        );
+
+        const sentMessage = await bot.sendMessage(
+          chatId,
+          "Вы вошли как администратор! Выберите раздел.",
+          {
+            reply_markup: {
+              keyboard: [
+                [{ text: "Управление уроками 📚" }],
+                [{ text: "Управление мерчем 🛒" }],
+                [{ text: "Управление паролями 🛠" }],
+                [{ text: "Logout" }],
+              ],
+              one_time_keyboard: true,
+              resize_keyboard: true,
+            },
+          }
+        );
+
+        if (user) {
+          user.messageIds.push(sentMessage.message_id);
+          await user.save();
+        }
+      } else if (text) {
+        const sentMessage = await bot.sendMessage(
+          chatId,
+          "Пароль неверный, попробуйте снова."
+        );
+        if (user) {
+          user.messageIds.push(sentMessage.message_id);
+          await user.save();
         }
       }
     });
 
-    bot.on("callback_query", async (callbackQuery) => {
+    bot.on("callback_query", (callbackQuery) => {
       const { message, data } = callbackQuery;
       if (!message || !data) {
         return;
       }
 
-      const [action, merchId, size] = data.split("_");
-
-      if (action === "buy") {
-        const merch = await Merch.findOne({ merchId });
-        if (merch) {
-          const totalPrice = merch.price; // можно добавить логику для расчета стоимости с учетом количества и других параметров
-
-          await bot.sendMessage(
-            message.chat.id,
-            `ID: ${merch.merchId}\nНазвание мерча: ${merch.name}\nИтоговая стоимость: ${totalPrice}\nРазмер: ${size}`
-          );
-        }
-      } else {
-        try {
-          const { lessonNumber, subLessonNumber } = JSON.parse(data);
-          Lesson.findOne({ lessonNumber }).then((lesson) => {
-            if (lesson && lesson.subLessons) {
-              const subLesson = lesson.subLessons.find(
-                (s) => s.lessonNumber === subLessonNumber
+      try {
+        const { lessonNumber, subLessonNumber } = JSON.parse(data);
+        Lesson.findOne({ lessonNumber }).then((lesson) => {
+          if (lesson && lesson.subLessons) {
+            const subLesson = lesson.subLessons.find(
+              (s) => s.lessonNumber === subLessonNumber
+            );
+            if (subLesson) {
+              bot.sendMessage(
+                message.chat.id,
+                `Подурок ${subLesson.lessonNumber}: ${subLesson.title}\n[Смотреть видео](${subLesson.videoUrl})`,
+                { parse_mode: "Markdown" }
               );
-              if (subLesson) {
-                bot.sendMessage(
-                  message.chat.id,
-                  `Подурок ${subLesson.lessonNumber}: ${subLesson.title}\n[Смотреть видео](${subLesson.videoUrl})`,
-                  { parse_mode: "Markdown" }
-                );
-              }
             }
-          });
-        } catch (error) {
-          console.error("Error parsing callback data: ", error);
-        }
+          }
+        });
+      } catch (error) {
+        console.error("Error parsing callback data: ", error);
       }
     });
 
