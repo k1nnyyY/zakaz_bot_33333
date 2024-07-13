@@ -190,7 +190,7 @@ await mongoose
                 text: "Купить",
                 callback_data: JSON.stringify({
                   action: "buy",
-                  merchId: merch._id.toString(),
+                  merchId: (merch._id as mongoose.Types.ObjectId).toString(),
                 }),
               },
             ],
@@ -538,7 +538,9 @@ await mongoose
                     text: "Купить",
                     callback_data: JSON.stringify({
                       action: "buy",
-                      merchId: merch._id.toString(),
+                      merchId: (
+                        merch._id as mongoose.Types.ObjectId
+                      ).toString(),
                     }),
                   },
                 ],
