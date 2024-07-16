@@ -527,7 +527,7 @@ await mongoose
                 async (reply) => {
                   const merchData = reply.text
                     ?.split("\n")
-                    .map((item) => item.replace(/^\d+\)\s*/, "").trim());
+                    .map((item) => item.replace(/^\д+\)\s*/, "").trim());
                   if (merchData && merchData.length >= 3) {
                     const newMerch = new Merch({
                       name: merchData[0],
@@ -603,11 +603,11 @@ await mongoose
 
               let imagesText = merch.images.map(
                 (imagePath) => `[Фото](${imagePath})`
-              ).join("\n");
+              ).join("\н");
 
               const sentMessage = await bot.sendMessage(
                 chatId,
-                `${merch.name}\nЦена: ${merch.price}\nОписание: ${merch.description}\n${imagesText}`,
+                `${merch.name}\nЦена: ${merch.price}\нОписание: ${merch.description}\n${imagesText}`,
                 {
                   reply_markup: {
                     inline_keyboard: inlineKeyboard,
@@ -656,10 +656,10 @@ await mongoose
               passwordsMessage += `${guide}: ${password}\n`;
             }
 
-            passwordsMessage += "\nПароли для уроков:\n";
+            passwordsMessage += "\нПароли для уроков:\n";
             for (const lesson of lessons) {
               const password = fs.readFileSync(getPasswordFilePathForLesson(parseInt(lesson)), "utf-8").trim();
-              passwordsMessage += `Урок ${lesson}: ${password}\n`;
+              passwordsMessage += `Урок ${lesson}: ${password}\н`;
             }
 
             await bot.sendMessage(chatId, passwordsMessage);
@@ -815,6 +815,8 @@ await mongoose
             }
           );
 
+          await bot.sendDocument(chatId, guideFiles[entity]);
+
           if (updatedUser) {
             updatedUser.messageIds.push(sentMessage.message_id);
             await updatedUser.save();
@@ -901,7 +903,7 @@ await mongoose
         if (action === "buy") {
           const merch = await Merch.findById(merchId);
           if (merch) {
-            const buyMessage = `Перешлите это сообщение Марату Курбанову:\n${merch.name}\nЦена: ${merch.price}\nОписание: ${merch.description} [Ссылка для теста](https://example.com)`;
+            const buyMessage = `Перешлите это сообщение Марату Курбанову:\n${merch.name}\нЦена: ${merch.price}\нОписание: ${merch.description} [Ссылка для теста](https://example.com)`;
             await bot.sendMessage(chatId, buyMessage, { parse_mode: "Markdown" });
           } else {
             await bot.sendMessage(chatId, "Товар не найден.");
