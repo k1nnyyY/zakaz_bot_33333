@@ -152,8 +152,10 @@ await mongoose
           },
         });
 
-        user.messageIds.push(sentMessage.message_id);
-        await user.save();
+        if (user) {
+          user.messageIds.push(sentMessage.message_id);
+          await user.save();
+        }
       } else {
         const sentMessage = await bot.sendMessage(
           chatId,
@@ -167,6 +169,7 @@ await mongoose
           }
         );
 
+        const user = await User.findOne({ chatId });
         if (user) {
           user.messageIds.push(sentMessage.message_id);
           await user.save();
@@ -196,15 +199,13 @@ await mongoose
             ],
           ];
 
-          let imagesText = merch.images.map(
-            (imagePath) => `[Фото](${imagePath})`
-          );
+          let imagesText = merch.images
+            .map((imagePath) => `[Фото](${imagePath})`)
+            .join("\n");
 
           const sentMessage = await bot.sendMessage(
             chatId,
-            `${merch.name}\nЦена: ${merch.price}\nОписание: ${
-              merch.description
-            }\n${imagesText.join("\n")}`,
+            `${merch.name}\nЦена: ${merch.price}\nОписание: ${merch.description}\n${imagesText}`,
             {
               reply_markup: {
                 inline_keyboard: inlineKeyboard,
@@ -213,7 +214,10 @@ await mongoose
             }
           );
 
-          user.messageIds.push(sentMessage.message_id);
+          if (user) {
+            user.messageIds.push(sentMessage.message_id);
+            await user.save();
+          }
         }
         return;
       }
@@ -236,8 +240,10 @@ await mongoose
             }
           );
 
-          user.messageIds.push(sentMessage.message_id);
-          await user.save();
+          if (user) {
+            user.messageIds.push(sentMessage.message_id);
+            await user.save();
+          }
         } else if (user.isAdmin) {
           if (text === "Управление уроками 📚") {
             const sentMessage = await bot.sendMessage(
@@ -551,15 +557,13 @@ await mongoose
                 ],
               ];
 
-              let imagesText = merch.images.map(
-                (imagePath) => `[Фото](${imagePath})`
-              );
+              let imagesText = merch.images
+                .map((imagePath) => `[Фото](${imagePath})`)
+                .join("\n");
 
               const sentMessage = await bot.sendMessage(
                 chatId,
-                `${merch.name}\nЦена: ${merch.price}\nОписание: ${
-                  merch.description
-                }\n${imagesText.join("\n")}`,
+                `${merch.name}\nЦена: ${merch.price}\nОписание: ${merch.description}\n${imagesText}`,
                 {
                   reply_markup: {
                     inline_keyboard: inlineKeyboard,
@@ -568,9 +572,11 @@ await mongoose
                 }
               );
 
-              user.messageIds.push(sentMessage.message_id);
+              if (user) {
+                user.messageIds.push(sentMessage.message_id);
+                await user.save();
+              }
             }
-            await user.save();
           } else if (text === "Управление паролями 🛠") {
             const sentMessage = await bot.sendMessage(
               chatId,
@@ -669,7 +675,7 @@ await mongoose
           await user.save();
         }
       } else if (text && checkPassword(text)) {
-        await User.findOneAndUpdate(
+        const updatedUser = await User.findOneAndUpdate(
           { chatId },
           { authenticated: true, isAdmin: false },
           { upsert: true, new: true }
@@ -695,12 +701,12 @@ await mongoose
           }
         );
 
-        if (user) {
-          user.messageIds.push(sentMessage.message_id);
-          await user.save();
+        if (updatedUser) {
+          updatedUser.messageIds.push(sentMessage.message_id);
+          await updatedUser.save();
         }
       } else if (text && checkAdminPassword(text)) {
-        await User.findOneAndUpdate(
+        const updatedUser = await User.findOneAndUpdate(
           { chatId },
           { authenticated: true, isAdmin: true },
           { upsert: true, new: true }
@@ -723,9 +729,9 @@ await mongoose
           }
         );
 
-        if (user) {
-          user.messageIds.push(sentMessage.message_id);
-          await user.save();
+        if (updatedUser) {
+          updatedUser.messageIds.push(sentMessage.message_id);
+          await updatedUser.save();
         }
       } else if (text) {
         const sentMessage = await bot.sendMessage(
@@ -756,8 +762,10 @@ await mongoose
         if (action === "buy") {
           const merch = await Merch.findById(merchId);
           if (merch) {
-            const buyMessage = `Перешлите это сообщение Марату Курбанову:\n${merch.name}\nЦена: ${merch.price}\nОписание: ${merch.description}`;
-            await bot.sendMessage(chatId, buyMessage);
+            const buyMessage = `Перешлите это сообщение Марату Курбанову:\n${merch.name}\nЦена: ${merch.price}\nОписание: ${merch.description} [Ссылка для теста](https://example.com)`;
+            await bot.sendMessage(chatId, buyMessage, {
+              parse_mode: "Markdown",
+            });
           } else {
             await bot.sendMessage(chatId, "Товар не найден.");
           }
