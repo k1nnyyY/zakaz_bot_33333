@@ -126,7 +126,7 @@ await mongoose
       guide3: "3333",
     };
 
-    const guideFiles = {
+    const guideFiles:any = {
       guide1: path.join(guidesPath, "Гайд по набору мышечной массы.pdf"),
       guide2: path.join(guidesPath, "ГАЙД ПО СНИЖЕНИЮ ВЕСА.pdf"),
       guide3: path.join(guidesPath, "Гайд_по_подготовки_к_турнирам_по_грэпплингу (1).pdf"),
