@@ -121,23 +121,15 @@ await mongoose
 
     function checkGuidePassword(password: string, guide: string): boolean {
       const filePath = getPasswordFilePathForGuide(guide);
-      if (!fs.existsSync(filePath)) {
-        console.log(`Guide password file not found: ${filePath}`);
-        return false;
-      }
+      if (!fs.existsSync(filePath)) return false;
       const storedPassword = fs.readFileSync(filePath, "utf-8").trim();
-      console.log(`Checking password for guide ${guide}. Expected: ${storedPassword}, Provided: ${password.trim()}`);
       return storedPassword === password.trim();
     }
 
     function checkLessonPassword(password: string, lessonNumber: number): boolean {
       const filePath = getPasswordFilePathForLesson(lessonNumber);
-      if (!fs.existsSync(filePath)) {
-        console.log(`Lesson password file not found: ${filePath}`);
-        return false;
-      }
+      if (!fs.existsSync(filePath)) return false;
       const storedPassword = fs.readFileSync(filePath, "utf-8").trim();
-      console.log(`Checking password for lesson ${lessonNumber}. Expected: ${storedPassword}, Provided: ${password.trim()}`);
       return storedPassword === password.trim();
     }
 
@@ -147,17 +139,6 @@ await mongoose
 
     function getPasswordFilePathForLesson(lessonNumber: number): string {
       return path.join(__dirname, `../passwords/lesson_${lessonNumber}.txt`);
-    }
-
-    function checkAdminPassword(password: string): boolean {
-      const filePath = path.join(__dirname, "../admin_passwords.txt");
-      if (!fs.existsSync(filePath)) {
-        console.log(`Admin password file not found: ${filePath}`);
-        return false;
-      }
-      const passwords = fs.readFileSync(filePath, "utf-8").split("\n").map((p) => p.trim());
-      console.log(`Checking admin password. Provided: ${password.trim()}`);
-      return passwords.includes(password.trim());
     }
 
     bot.onText(/\/start/, async (msg: Message) => {
@@ -177,16 +158,14 @@ await mongoose
               [{ text: "Logout" }],
             ]
           : [
-              user.guideAccess.includes("guide1") ? [{ text: "Гайды 🥋" }] : [],
-              user.guideAccess.includes("guide2") ? [{ text: "Гайды 🥋" }] : [],
-              user.guideAccess.includes("guide3") ? [{ text: "Гайды 🥋" }] : [],
               [{ text: "Видео Курсы 🎉" }],
+              [{ text: "Гайды 🥋" }],
               [{ text: "Отзывы 💬" }],
               [{ text: "Помощь 🚨" }],
               [{ text: "Как работать с ботом ❓" }],
               [{ text: "Мерч 🛒" }],
               [{ text: "Logout" }],
-            ].filter(button => button.length > 0);
+            ];
 
         const sentMessage = await bot.sendMessage(chatId, message, {
           reply_markup: {
@@ -352,7 +331,7 @@ await mongoose
                     async (reply) => {
                       const lessonData = reply.text
                         ?.split("\n")
-                        .map((item) => item.replace(/^\д+\)\с*/, "").trim());
+                        .map((item) => item.replace(/^\d+\)\s*/, "").trim());
                       if (lessonData && lessonData.length >= 5) {
                         const newLesson = new Lesson({
                           playlist: lessonData[0],
@@ -442,7 +421,7 @@ await mongoose
                   chatId,
                   lesson.imageUrl,
                   {
-                    caption: `Урок ${lesson.lessonNumber}: ${lesson.description}\н[Смотреть видео](${lesson.videoUrl})`,
+                    caption: `Урок ${lesson.lessonNumber}: ${lesson.description}\n[Смотреть видео](${lesson.videoUrl})`,
                     parse_mode: "Markdown",
                     reply_markup: {
                       inline_keyboard: inlineKeyboard,
@@ -453,7 +432,7 @@ await mongoose
               } else {
                 const sentMessage = await bot.sendMessage(
                   chatId,
-                  `Урок ${lesson.lessonNumber}: ${lesson.description}\н[Смотреть видео](${lesson.videoUrl})`,
+                  `Урок ${lesson.lessonNumber}: ${lesson.description}\n[Смотреть видео](${lesson.videoUrl})`,
                   {
                     parse_mode: "Markdown",
                     reply_markup: {
@@ -518,7 +497,7 @@ await mongoose
 
               const sentMessage = await bot.sendMessage(
                 chatId,
-                "Теперь введите данные мерча в формате:\н1) Название\n2) Цена\n3) Описание",
+                "Теперь введите данные мерча в формате:\n1) Название\n2) Цена\n3) Описание",
                 {
                   reply_markup: {
                     force_reply: true,
@@ -534,8 +513,8 @@ await mongoose
                 sentMessage.message_id,
                 async (reply) => {
                   const merchData = reply.text
-                    ?.split("\н")
-                    .map((item) => item.replace(/^\д+\)\с*/, "").trim());
+                    ?.split("\n")
+                    .map((item) => item.replace(/^\d+\)\s*/, "").trim());
                   if (merchData && merchData.length >= 3) {
                     const newMerch = new Merch({
                       name: merchData[0],
@@ -611,11 +590,11 @@ await mongoose
 
               let imagesText = merch.images.map(
                 (imagePath) => `[Фото](${imagePath})`
-              ).join("\н");
+              ).join("\n");
 
               const sentMessage = await bot.sendMessage(
                 chatId,
-                `${merch.name}\нЦена: ${merch.price}\нОписание: ${merch.description}\н${imagesText}`,
+                `${merch.name}\nЦена: ${merch.price}\nОписание: ${merch.description}\n${imagesText}`,
                 {
                   reply_markup: {
                     inline_keyboard: inlineKeyboard,
@@ -658,16 +637,16 @@ await mongoose
               .filter(file => file.startsWith("lesson_"))
               .map(file => file.replace("lesson_", "").replace(".txt", ""));
 
-            let passwordsMessage = "Пароли для гайдов:\н";
+            let passwordsMessage = "Пароли для гайдов:\n";
             for (const guide of guides) {
               const password = fs.readFileSync(getPasswordFilePathForGuide(guide), "utf-8").trim();
-              passwordsMessage += `${guide}: ${password}\н`;
+              passwordsMessage += `${guide}: ${password}\n`;
             }
 
-            passwordsMessage += "\нПароли для уроков:\н";
+            passwordsMessage += "\nПароли для уроков:\n";
             for (const lesson of lessons) {
               const password = fs.readFileSync(getPasswordFilePathForLesson(parseInt(lesson)), "utf-8").trim();
-              passwordsMessage += `Урок ${lesson}: ${password}\н`;
+              passwordsMessage += `Урок ${lesson}: ${password}\n`;
             }
 
             await bot.sendMessage(chatId, passwordsMessage);
@@ -791,25 +770,30 @@ await mongoose
           user.messageIds.push(sentMessage.message_id);
           await user.save();
         }
-      } else if (text) {
-        console.log(`Received login attempt with text: ${text}`);
+      } else if (text && text.split(" ").length === 2) {
+        const [entity, password] = text.split(" ");
+        const isGuide = entity.startsWith("guide");
+        const isLesson = entity.startsWith("lesson");
 
-        if (checkAdminPassword(text)) {
+        if (isGuide && checkGuidePassword(password, entity)) {
           const updatedUser = await User.findOneAndUpdate(
             { chatId },
-            { authenticated: true, isAdmin: true },
+            { authenticated: true, isAdmin: false, $addToSet: { guideAccess: entity } },
             { upsert: true, new: true }
           );
 
           const sentMessage = await bot.sendMessage(
             chatId,
-            "Вы вошли как администратор! Выберите раздел.",
+            `Пароль верный! Вы получили доступ к гайду ${entity}. Выберите раздел.`,
             {
               reply_markup: {
                 keyboard: [
-                  [{ text: "Управление уроками 📚" }],
-                  [{ text: "Управление мерчем 🛒" }],
-                  [{ text: "Управление паролями 🛠" }],
+                  [{ text: "Видео Курсы 🎉" }],
+                  [{ text: "Гайды 🥋" }],
+                  [{ text: "Отзывы 💬" }],
+                  [{ text: "Помощь 🚨" }],
+                  [{ text: "Как работать с ботом ❓" }],
+                  [{ text: "Мерч 🛒" }],
                   [{ text: "Logout" }],
                 ],
                 one_time_keyboard: true,
@@ -822,24 +806,18 @@ await mongoose
             updatedUser.messageIds.push(sentMessage.message_id);
             await updatedUser.save();
           }
-        } else if (text.includes(" ")) {
-          const [entity, password] = text.split(" ");
-          const isGuide = entity.startsWith("guide");
-          const isLesson = entity.startsWith("lesson");
-
-          console.log(`Parsed entity: ${entity}, password: ${password}`);
-
-          if (isGuide && checkGuidePassword(password, entity)) {
-            console.log(`Guide password check passed for ${entity}`);
+        } else if (isLesson) {
+          const lessonNumber = parseInt(entity.replace("lesson", ""));
+          if (!isNaN(lessonNumber) && checkLessonPassword(password, lessonNumber)) {
             const updatedUser = await User.findOneAndUpdate(
               { chatId },
-              { authenticated: true, isAdmin: false, $addToSet: { guideAccess: entity } },
+              { authenticated: true, isAdmin: false, $addToSet: { lessonAccess: lessonNumber } },
               { upsert: true, new: true }
             );
 
             const sentMessage = await bot.sendMessage(
               chatId,
-              `Пароль верный! Вы получили доступ к гайду ${entity}. Выберите раздел.`,
+              `Пароль верный! Вы получили доступ к уроку ${lessonNumber}. Выберите раздел.`,
               {
                 reply_markup: {
                   keyboard: [
@@ -861,50 +839,6 @@ await mongoose
               updatedUser.messageIds.push(sentMessage.message_id);
               await updatedUser.save();
             }
-          } else if (isLesson) {
-            const lessonNumber = parseInt(entity.replace("lesson", ""));
-            if (!isNaN(lessonNumber) && checkLessonPassword(password, lessonNumber)) {
-              console.log(`Lesson password check passed for lesson ${lessonNumber}`);
-              const updatedUser = await User.findOneAndUpdate(
-                { chatId },
-                { authenticated: true, isAdmin: false, $addToSet: { lessonAccess: lessonNumber } },
-                { upsert: true, new: true }
-              );
-
-              const sentMessage = await bot.sendMessage(
-                chatId,
-                `Пароль верный! Вы получили доступ к уроку ${lessonNumber}. Выберите раздел.`,
-                {
-                  reply_markup: {
-                    keyboard: [
-                      [{ text: "Видео Курсы 🎉" }],
-                      [{ text: "Гайды 🥋" }],
-                      [{ text: "Отзывы 💬" }],
-                      [{ text: "Помощь 🚨" }],
-                      [{ text: "Как работать с ботом ❓" }],
-                      [{ text: "Мерч 🛒" }],
-                      [{ text: "Logout" }],
-                    ],
-                    one_time_keyboard: true,
-                    resize_keyboard: true,
-                  },
-                }
-              );
-
-              if (updatedUser) {
-                updatedUser.messageIds.push(sentMessage.message_id);
-                await updatedUser.save();
-              }
-            } else {
-              const sentMessage = await bot.sendMessage(
-                chatId,
-                "Пароль неверный, попробуйте снова."
-              );
-              if (user) {
-                user.messageIds.push(sentMessage.message_id);
-                await user.save();
-              }
-            }
           } else {
             const sentMessage = await bot.sendMessage(
               chatId,
@@ -924,6 +858,15 @@ await mongoose
             user.messageIds.push(sentMessage.message_id);
             await user.save();
           }
+        }
+      } else {
+        const sentMessage = await bot.sendMessage(
+          chatId,
+          "Пароль неверный, попробуйте снова."
+        );
+        if (user) {
+          user.messageIds.push(sentMessage.message_id);
+          await user.save();
         }
       }
     });
