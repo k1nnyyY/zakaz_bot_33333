@@ -121,15 +121,23 @@ await mongoose
 
     function checkGuidePassword(password: string, guide: string): boolean {
       const filePath = getPasswordFilePathForGuide(guide);
-      if (!fs.existsSync(filePath)) return false;
+      if (!fs.existsSync(filePath)) {
+        console.log(`Guide password file not found: ${filePath}`);
+        return false;
+      }
       const storedPassword = fs.readFileSync(filePath, "utf-8").trim();
+      console.log(`Checking password for guide ${guide}. Expected: ${storedPassword}, Provided: ${password.trim()}`);
       return storedPassword === password.trim();
     }
 
     function checkLessonPassword(password: string, lessonNumber: number): boolean {
       const filePath = getPasswordFilePathForLesson(lessonNumber);
-      if (!fs.existsSync(filePath)) return false;
+      if (!fs.existsSync(filePath)) {
+        console.log(`Lesson password file not found: ${filePath}`);
+        return false;
+      }
       const storedPassword = fs.readFileSync(filePath, "utf-8").trim();
+      console.log(`Checking password for lesson ${lessonNumber}. Expected: ${storedPassword}, Provided: ${password.trim()}`);
       return storedPassword === password.trim();
     }
 
@@ -775,7 +783,10 @@ await mongoose
         const isGuide = entity.startsWith("guide");
         const isLesson = entity.startsWith("lesson");
 
+        console.log(`Received entity: ${entity}, password: ${password}`);
+
         if (isGuide && checkGuidePassword(password, entity)) {
+          console.log(`Guide password check passed for ${entity}`);
           const updatedUser = await User.findOneAndUpdate(
             { chatId },
             { authenticated: true, isAdmin: false, $addToSet: { guideAccess: entity } },
@@ -809,6 +820,7 @@ await mongoose
         } else if (isLesson) {
           const lessonNumber = parseInt(entity.replace("lesson", ""));
           if (!isNaN(lessonNumber) && checkLessonPassword(password, lessonNumber)) {
+            console.log(`Lesson password check passed for lesson ${lessonNumber}`);
             const updatedUser = await User.findOneAndUpdate(
               { chatId },
               { authenticated: true, isAdmin: false, $addToSet: { lessonAccess: lessonNumber } },
@@ -850,6 +862,7 @@ await mongoose
             }
           }
         } else {
+          console.log(`Password check failed for entity: ${entity}`);
           const sentMessage = await bot.sendMessage(
             chatId,
             "Пароль неверный, попробуйте снова."
