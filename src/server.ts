@@ -121,9 +121,9 @@ await mongoose
     }
 
     const guidePasswords:any = {
-      guide1: "guide1_password",
-      guide2: "guide2_password",
-      guide3: "guide3_password",
+      guide1: "2323",
+      guide2: "2222",
+      guide3: "3333",
     };
 
     const guideFiles: any = {
@@ -238,7 +238,7 @@ await mongoose
 
           const sentMessage = await bot.sendMessage(
             chatId,
-            `${merch.name}\nЦена: ${merch.price}\nОписание: ${merch.description}\n${imagesText}`,
+            `${merch.name}\nЦена: ${merch.price}\нОписание: ${merch.description}\n${imagesText}`,
             {
               reply_markup: {
                 inline_keyboard: inlineKeyboard,
@@ -324,7 +324,7 @@ await mongoose
 
                   const sentMessage = await bot.sendMessage(
                     chatId,
-                    "Теперь введите данные урока в формате:\n1) Плейлист\n2) Номер урока\n3) URL видео\n4) Описание\n5) Есть подуроки (да/нет)",
+                    "Теперь введите данные урока в формате:\н1) Плейлист\n2) Номер урока\n3) URL видео\n4) Описание\n5) Есть подуроки (да/нет)",
                     {
                       reply_markup: {
                         force_reply: true,
@@ -341,7 +341,7 @@ await mongoose
                     async (reply) => {
                       const lessonData = reply.text
                         ?.split("\n")
-                        .map((item) => item.replace(/^\d+\)\s*/, "").trim());
+                        .map((item) => item.replace(/^\д+\)\s*/, "").trim());
                       if (lessonData && lessonData.length >= 5) {
                         const newLesson = new Lesson({
                           playlist: lessonData[0],
@@ -431,7 +431,7 @@ await mongoose
                   chatId,
                   lesson.imageUrl,
                   {
-                    caption: `Урок ${lesson.lessonNumber}: ${lesson.description}\n[Смотреть видео](${lesson.videoUrl})`,
+                    caption: `Урок ${lesson.lessonNumber}: ${lesson.description}\н[Смотреть видео](${lesson.videoUrl})`,
                     parse_mode: "Markdown",
                     reply_markup: {
                       inline_keyboard: inlineKeyboard,
@@ -442,7 +442,7 @@ await mongoose
               } else {
                 const sentMessage = await bot.sendMessage(
                   chatId,
-                  `Урок ${lesson.lessonNumber}: ${lesson.description}\n[Смотреть видео](${lesson.videoUrl})`,
+                  `Урок ${lesson.lessonNumber}: ${lesson.description}\н[Смотреть видео](${lesson.videoUrl})`,
                   {
                     parse_mode: "Markdown",
                     reply_markup: {
@@ -507,7 +507,7 @@ await mongoose
 
               const sentMessage = await bot.sendMessage(
                 chatId,
-                "Теперь введите данные мерча в формате:\n1) Название\n2) Цена\n3) Описание",
+                "Теперь введите данные мерча в формате:\н1) Название\n2) Цена\n3) Описание",
                 {
                   reply_markup: {
                     force_reply: true,
@@ -523,7 +523,7 @@ await mongoose
                 sentMessage.message_id,
                 async (reply) => {
                   const merchData = reply.text
-                    ?.split("\n")
+                    ?.split("\н")
                     .map((item) => item.replace(/^\д+\)\s*/, "").trim());
                   if (merchData && merchData.length >= 3) {
                     const newMerch = new Merch({
@@ -647,7 +647,7 @@ await mongoose
               .filter(file => file.startsWith("lesson_"))
               .map(file => file.replace("lesson_", "").replace(".txt", ""));
 
-            let passwordsMessage = "Пароли для гайдов:\n";
+            let passwordsMessage = "Пароли для гайдов:\н";
             for (const guide of guides) {
               const password = fs.readFileSync(getPasswordFilePathForGuide(guide), "utf-8").trim();
               passwordsMessage += `${guide}: ${password}\н`;
