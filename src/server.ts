@@ -118,6 +118,10 @@ await mongoose
       return passwords.includes(password.trim());
     }
 
+    function getPasswordFilePath(lessonNumber: number): string {
+      return path.join(__dirname, `../passwords/lesson_${lessonNumber}.txt`);
+    }
+
     bot.onText(/\/start/, async (msg: Message) => {
       const chatId = msg.chat.id;
 
@@ -320,6 +324,10 @@ await mongoose
                         });
                         try {
                           await newLesson.save();
+                          await fs.promises.writeFile(
+                            getPasswordFilePath(newLesson.lessonNumber),
+                            `password_${newLesson.lessonNumber}`
+                          );
                           await bot.sendMessage(chatId, "Урок добавлен.");
                         } catch (error) {
                           await bot.sendMessage(
@@ -361,7 +369,13 @@ await mongoose
                   await Lesson.deleteOne({
                     lessonNumber: Number(lessonNumber),
                   });
-                  await bot.sendMessage(chatId, "Урок удален.");
+                  const passwordFilePath = getPasswordFilePath(
+                    Number(lessonNumber)
+                  );
+                  if (fs.existsSync(passwordFilePath)) {
+                    fs.unlinkSync(passwordFilePath);
+                  }
+                  await bot.sendMessage(chatId, "Урок и его пароли удалены.");
                 } else {
                   await bot.sendMessage(
                     chatId,
