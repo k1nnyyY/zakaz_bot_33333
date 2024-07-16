@@ -239,7 +239,7 @@ await mongoose
 
           const sentMessage = await bot.sendMessage(
             chatId,
-            `${merch.name}\nЦена: ${merch.price}\нОписание: ${merch.description}\н${imagesText}`,
+            `${merch.name}\nЦена: ${merch.price}\nОписание: ${merch.description}\n${imagesText}`,
             {
               reply_markup: {
                 inline_keyboard: inlineKeyboard,
@@ -773,6 +773,7 @@ await mongoose
           }
         }
       } else if (text === "Login") {
+        console.log(`User ${chatId} pressed Login`);
         const sentMessage = await bot.sendMessage(
           chatId,
           "Пожалуйста, введите ваш пароль."
@@ -785,6 +786,8 @@ await mongoose
         const [entity, password] = text.split(" ");
         const isGuide = entity.startsWith("guide");
         const isLesson = entity.startsWith("lesson");
+
+        console.log(`User ${chatId} entered password for ${entity}`);
 
         if (isGuide && checkGuidePassword(password, entity)) {
           const updatedUser = await User.findOneAndUpdate(
