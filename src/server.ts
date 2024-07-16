@@ -342,7 +342,7 @@ await mongoose
                     async (reply) => {
                       const lessonData = reply.text
                         ?.split("\n")
-                        .map((item) => item.replace(/^\d+\)\s*/, "").trim());
+                        .map((item) => item.replace(/^\д+\)\s*/, "").trim());
                       if (lessonData && lessonData.length >= 5) {
                         const newLesson = new Lesson({
                           playlist: lessonData[0],
@@ -432,7 +432,7 @@ await mongoose
                   chatId,
                   lesson.imageUrl,
                   {
-                    caption: `Урок ${lesson.lessonNumber}: ${lesson.description}\n[Смотреть видео](${lesson.videoUrl})`,
+                    caption: `Урок ${lesson.lessonNumber}: ${lesson.description}\н[Смотреть видео](${lesson.videoUrl})`,
                     parse_mode: "Markdown",
                     reply_markup: {
                       inline_keyboard: inlineKeyboard,
@@ -443,7 +443,7 @@ await mongoose
               } else {
                 const sentMessage = await bot.sendMessage(
                   chatId,
-                  `Урок ${lesson.lessonNumber}: ${lesson.description}\n[Смотреть видео](${lesson.videoUrl})`,
+                  `Урок ${lesson.lessonNumber}: ${lesson.description}\н[Смотреть видео](${lesson.videoUrl})`,
                   {
                     parse_mode: "Markdown",
                     reply_markup: {
@@ -508,7 +508,7 @@ await mongoose
 
               const sentMessage = await bot.sendMessage(
                 chatId,
-                "Теперь введите данные мерча в формате:\n1) Название\n2) Цена\n3) Описание",
+                "Теперь введите данные мерча в формате:\н1) Название\n2) Цена\n3) Описание",
                 {
                   reply_markup: {
                     force_reply: true,
@@ -524,8 +524,8 @@ await mongoose
                 sentMessage.message_id,
                 async (reply) => {
                   const merchData = reply.text
-                    ?.split("\n")
-                    .map((item) => item.replace(/^\д+\)\s*/, "").trim());
+                    ?.split("\н")
+                    .map((item) => item.replace(/^\д+\)\с*/, "").trim());
                   if (merchData && merchData.length >= 3) {
                     const newMerch = new Merch({
                       name: merchData[0],
@@ -605,7 +605,7 @@ await mongoose
 
               const sentMessage = await bot.sendMessage(
                 chatId,
-                `${merch.name}\nЦена: ${merch.price}\нОписание: ${merch.description}\n${imagesText}`,
+                `${merch.name}\нЦена: ${merch.price}\нОписание: ${merch.description}\н${imagesText}`,
                 {
                   reply_markup: {
                     inline_keyboard: inlineKeyboard,
@@ -648,13 +648,13 @@ await mongoose
               .filter(file => file.startsWith("lesson_"))
               .map(file => file.replace("lesson_", "").replace(".txt", ""));
 
-            let passwordsMessage = "Пароли для гайдов:\n";
+            let passwordsMessage = "Пароли для гайдов:\н";
             for (const guide of guides) {
               const password = fs.readFileSync(getPasswordFilePathForGuide(guide), "utf-8").trim();
-              passwordsMessage += `${guide}: ${password}\n`;
+              passwordsMessage += `${guide}: ${password}\н`;
             }
 
-            passwordsMessage += "\нПароли для уроков:\n";
+            passwordsMessage += "\нПароли для уроков:\н";
             for (const lesson of lessons) {
               const password = fs.readFileSync(getPasswordFilePathForLesson(parseInt(lesson)), "utf-8").trim();
               passwordsMessage += `Урок ${lesson}: ${password}\н`;
@@ -740,7 +740,7 @@ await mongoose
                   if (fs.existsSync(filePath)) {
                     fs.unlinkSync(filePath);
                   }
-                } else if (isLesson) {
+                } else if (lesson) {
                   const lessonNumber = parseInt(entity!.split(" ")[0]);
                   const filePath = getPasswordFilePathForLesson(lessonNumber);
                   if (fs.existsSync(filePath)) {
@@ -793,6 +793,8 @@ await mongoose
             { upsert: true, new: true }
           );
 
+          await bot.sendDocument(chatId, guideFiles[entity]);
+
           const sentMessage = await bot.sendMessage(
             chatId,
             `Пароль верный! Вы получили доступ к гайду ${entity}. Выберите раздел.`,
@@ -810,8 +812,6 @@ await mongoose
               },
             }
           );
-
-          await bot.sendDocument(chatId, guideFiles[entity]);
 
           if (updatedUser) {
             updatedUser.messageIds.push(sentMessage.message_id);
@@ -897,7 +897,7 @@ await mongoose
         if (action === "buy") {
           const merch = await Merch.findById(merchId);
           if (merch) {
-            const buyMessage = `Перешлите это сообщение Марату Курбанову:\n${merch.name}\нЦена: ${merch.price}\нОписание: ${merch.description} [Ссылка для теста](https://example.com)`;
+            const buyMessage = `Перешлите это сообщение Марату Курбанову:\н${merch.name}\нЦена: ${merch.price}\нОписание: ${merch.description} [Ссылка для теста](https://example.com)`;
             await bot.sendMessage(chatId, buyMessage, { parse_mode: "Markdown" });
           } else {
             await bot.sendMessage(chatId, "Товар не найден.");
