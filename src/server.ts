@@ -96,8 +96,23 @@ await mongoose
     console.log("Connected to MongoDB");
 
     const imagesPath = path.join(__dirname, "images");
+    const passwordsPath = path.join(__dirname, "../passwords");
+
     if (!fs.existsSync(imagesPath)) {
       fs.mkdirSync(imagesPath);
+    }
+
+    if (!fs.existsSync(passwordsPath)) {
+      fs.mkdirSync(passwordsPath);
+    }
+
+    const guides = ["guide1", "guide2", "guide3"];
+
+    for (const guide of guides) {
+      const guideFilePath = getPasswordFilePathForGuide(guide);
+      if (!fs.existsSync(guideFilePath)) {
+        fs.writeFileSync(guideFilePath, `password_${guide}`);
+      }
     }
 
     function checkPassword(password: string): boolean {
@@ -328,10 +343,10 @@ await mongoose
                         });
                         try {
                           await newLesson.save();
-                          await fs.promises.writeFile(
-                            getPasswordFilePathForLesson(newLesson.lessonNumber),
-                            `password_${newLesson.lessonNumber}`
-                          );
+                          const passwordFilePath = getPasswordFilePathForLesson(newLesson.lessonNumber);
+                          if (!fs.existsSync(passwordFilePath)) {
+                            fs.writeFileSync(passwordFilePath, `password_${newLesson.lessonNumber}`);
+                          }
                           await bot.sendMessage(chatId, "Урок добавлен.");
                         } catch (error) {
                           await bot.sendMessage(
@@ -636,7 +651,6 @@ await mongoose
 
             await bot.sendMessage(chatId, passwordsMessage);
           } else if (text === "Добавить пароль") {
-            const guides = await Lesson.distinct("playlist");
             const lessons = await Lesson.find({}).sort({ lessonNumber: 1 });
 
             let guideButtons = guides.map(guide => [{ text: `Пароль для гайда ${guide}` }]);
@@ -683,7 +697,6 @@ await mongoose
               }
             });
           } else if (text === "Удалить пароль") {
-            const guides = await Lesson.distinct("playlist");
             const lessons = await Lesson.find({}).sort({ lessonNumber: 1 });
 
             let guideButtons = guides.map(guide => [{ text: `Удалить пароль для гайда ${guide}` }]);
