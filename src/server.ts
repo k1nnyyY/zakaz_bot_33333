@@ -121,22 +121,19 @@ await mongoose
     }
 
     const guidePasswords = {
-      guide1: "2323",
-      guide2: "2222",
-      guide3: "3333",
+      guide1: "guide1_password",
+      guide2: "guide2_password",
+      guide3: "guide3_password",
     };
 
-    const guideFiles:any = {
+    const guideFiles: any = {
       guide1: path.join(guidesPath, "Гайд по набору мышечной массы.pdf"),
       guide2: path.join(guidesPath, "ГАЙД ПО СНИЖЕНИЮ ВЕСА.pdf"),
       guide3: path.join(guidesPath, "Гайд_по_подготовки_к_турнирам_по_грэпплингу (1).pdf"),
     };
 
     function checkGuidePassword(password: string, guide: string): boolean {
-      const filePath = getPasswordFilePathForGuide(guide);
-      if (!fs.existsSync(filePath)) return false;
-      const storedPassword = fs.readFileSync(filePath, "utf-8").trim();
-      return storedPassword === password.trim();
+      return guidePasswords[guide] === password;
     }
 
     function checkLessonPassword(password: string, lessonNumber: number): boolean {
@@ -607,7 +604,7 @@ await mongoose
 
               const sentMessage = await bot.sendMessage(
                 chatId,
-                `${merch.name}\nЦена: ${merch.price}\нОписание: ${merch.description}\n${imagesText}`,
+                `${merch.name}\нЦена: ${merch.price}\нОписание: ${merch.description}\н${imagesText}`,
                 {
                   reply_markup: {
                     inline_keyboard: inlineKeyboard,
@@ -653,10 +650,10 @@ await mongoose
             let passwordsMessage = "Пароли для гайдов:\n";
             for (const guide of guides) {
               const password = fs.readFileSync(getPasswordFilePathForGuide(guide), "utf-8").trim();
-              passwordsMessage += `${guide}: ${password}\n`;
+              passwordsMessage += `${guide}: ${password}\н`;
             }
 
-            passwordsMessage += "\нПароли для уроков:\n";
+            passwordsMessage += "\нПароли для уроков:\н";
             for (const lesson of lessons) {
               const password = fs.readFileSync(getPasswordFilePathForLesson(parseInt(lesson)), "utf-8").trim();
               passwordsMessage += `Урок ${lesson}: ${password}\н`;
@@ -783,10 +780,10 @@ await mongoose
           user.messageIds.push(sentMessage.message_id);
           await user.save();
         }
-      } else if (text && text.split(" ").length === 2) {
+      } else if (text) {
         const [entity, password] = text.split(" ");
-        const isGuide = entity.startsWith("guide");
-        const isLesson = entity.startsWith("lesson");
+        const isGuide = guides.includes(entity);
+        const isLesson = !isNaN(parseInt(entity));
 
         if (isGuide && checkGuidePassword(password, entity)) {
           const updatedUser = await User.findOneAndUpdate(
@@ -821,48 +818,36 @@ await mongoose
             updatedUser.messageIds.push(sentMessage.message_id);
             await updatedUser.save();
           }
-        } else if (isLesson) {
-          const lessonNumber = parseInt(entity.replace("lesson", ""));
-          if (!isNaN(lessonNumber) && checkLessonPassword(password, lessonNumber)) {
-            const updatedUser = await User.findOneAndUpdate(
-              { chatId },
-              { authenticated: true, isAdmin: false, $addToSet: { lessonAccess: lessonNumber } },
-              { upsert: true, new: true }
-            );
+        } else if (isLesson && checkLessonPassword(password, parseInt(entity))) {
+          const updatedUser = await User.findOneAndUpdate(
+            { chatId },
+            { authenticated: true, isAdmin: false, $addToSet: { lessonAccess: parseInt(entity) } },
+            { upsert: true, new: true }
+          );
 
-            const sentMessage = await bot.sendMessage(
-              chatId,
-              `Пароль верный! Вы получили доступ к уроку ${lessonNumber}. Выберите раздел.`,
-              {
-                reply_markup: {
-                  keyboard: [
-                    [{ text: "Видео Курсы 🎉" }],
-                    [{ text: "Гайды 🥋" }],
-                    [{ text: "Отзывы 💬" }],
-                    [{ text: "Помощь 🚨" }],
-                    [{ text: "Как работать с ботом ❓" }],
-                    [{ text: "Мерч 🛒" }],
-                    [{ text: "Logout" }],
-                  ],
-                  one_time_keyboard: true,
-                  resize_keyboard: true,
-                },
-              }
-            );
+          const sentMessage = await bot.sendMessage(
+            chatId,
+            `Пароль верный! Вы получили доступ к уроку ${entity}. Выберите раздел.`,
+            {
+              reply_markup: {
+                keyboard: [
+                  [{ text: "Видео Курсы 🎉" }],
+                  [{ text: "Гайды 🥋" }],
+                  [{ text: "Отзывы 💬" }],
+                  [{ text: "Помощь 🚨" }],
+                  [{ text: "Как работать с ботом ❓" }],
+                  [{ text: "Мерч 🛒" }],
+                  [{ text: "Logout" }],
+                ],
+                one_time_keyboard: true,
+                resize_keyboard: true,
+              },
+            }
+          );
 
-            if (updatedUser) {
-              updatedUser.messageIds.push(sentMessage.message_id);
-              await updatedUser.save();
-            }
-          } else {
-            const sentMessage = await bot.sendMessage(
-              chatId,
-              "Пароль неверный, попробуйте снова."
-            );
-            if (user) {
-              user.messageIds.push(sentMessage.message_id);
-              await user.save();
-            }
+          if (updatedUser) {
+            updatedUser.messageIds.push(sentMessage.message_id);
+            await updatedUser.save();
           }
         } else {
           const sentMessage = await bot.sendMessage(
@@ -903,7 +888,7 @@ await mongoose
         if (action === "buy") {
           const merch = await Merch.findById(merchId);
           if (merch) {
-            const buyMessage = `Перешлите это сообщение Марату Курбанову:\n${merch.name}\нЦена: ${merch.price}\нОписание: ${merch.description} [Ссылка для теста](https://example.com)`;
+            const buyMessage = `Перешлите это сообщение Марату Курбанову:\н${merch.name}\нЦена: ${merch.price}\нОписание: ${merch.description} [Ссылка для теста](https://example.com)`;
             await bot.sendMessage(chatId, buyMessage, { parse_mode: "Markdown" });
           } else {
             await bot.sendMessage(chatId, "Товар не найден.");
