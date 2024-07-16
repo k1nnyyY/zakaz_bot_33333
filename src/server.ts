@@ -67,6 +67,8 @@ interface IUser extends Document {
   chatId: number;
   authenticated: boolean;
   isAdmin: boolean;
+  guideAccess: string[];
+  lessonAccess: number[];
   messageIds: number[];
 }
 
@@ -74,6 +76,8 @@ const UserSchema: Schema = new Schema({
   chatId: { type: Number, required: true, unique: true },
   authenticated: { type: Boolean, required: true, default: false },
   isAdmin: { type: Boolean, required: true, default: false },
+  guideAccess: { type: [String], default: [] },
+  lessonAccess: { type: [Number], default: [] },
   messageIds: { type: [Number], default: [] },
 });
 
@@ -115,22 +119,16 @@ await mongoose
       }
     }
 
-    function checkPassword(password: string): boolean {
-      const filePath = path.join(__dirname, "../passwords.txt");
-      const passwords = fs
-        .readFileSync(filePath, "utf-8")
-        .split("\n")
-        .map((p) => p.trim());
-      return passwords.includes(password.trim());
+    function checkGuidePassword(password: string, guide: string): boolean {
+      const filePath = getPasswordFilePathForGuide(guide);
+      const storedPassword = fs.readFileSync(filePath, "utf-8").trim();
+      return storedPassword === password.trim();
     }
 
-    function checkAdminPassword(password: string): boolean {
-      const filePath = path.join(__dirname, "../admin_passwords.txt");
-      const passwords = fs
-        .readFileSync(filePath, "utf-8")
-        .split("\n")
-        .map((p) => p.trim());
-      return passwords.includes(password.trim());
+    function checkLessonPassword(password: string, lessonNumber: number): boolean {
+      const filePath = getPasswordFilePathForLesson(lessonNumber);
+      const storedPassword = fs.readFileSync(filePath, "utf-8").trim();
+      return storedPassword === password.trim();
     }
 
     function getPasswordFilePathForGuide(guideName: string): string {
@@ -770,66 +768,95 @@ await mongoose
           user.messageIds.push(sentMessage.message_id);
           await user.save();
         }
-      } else if (text && checkPassword(text)) {
-        const updatedUser = await User.findOneAndUpdate(
-          { chatId },
-          { authenticated: true, isAdmin: false },
-          { upsert: true, new: true }
-        );
+      } else if (text && text.startsWith("guide")) {
+        const guide = text.split(" ")[0];
+        const password = text.split(" ")[1];
+        if (guides.includes(guide) && checkGuidePassword(password, guide)) {
+          const updatedUser = await User.findOneAndUpdate(
+            { chatId },
+            { authenticated: true, isAdmin: false, $addToSet: { guideAccess: guide } },
+            { upsert: true, new: true }
+          );
 
-        const sentMessage = await bot.sendMessage(
-          chatId,
-          "Пароль верный! Выберите раздел.",
-          {
-            reply_markup: {
-              keyboard: [
-                [{ text: "Видео Курсы 🎉" }],
-                [{ text: "Гайды 🥋" }],
-                [{ text: "Отзывы 💬" }],
-                [{ text: "Помощь 🚨" }],
-                [{ text: "Как работать с ботом ❓" }],
-                [{ text: "Мерч 🛒" }],
-                [{ text: "Logout" }],
-              ],
-              one_time_keyboard: true,
-              resize_keyboard: true,
-            },
+          const sentMessage = await bot.sendMessage(
+            chatId,
+            `Пароль верный! Вы получили доступ к гайду ${guide}. Выберите раздел.`,
+            {
+              reply_markup: {
+                keyboard: [
+                  [{ text: "Видео Курсы 🎉" }],
+                  [{ text: "Гайды 🥋" }],
+                  [{ text: "Отзывы 💬" }],
+                  [{ text: "Помощь 🚨" }],
+                  [{ text: "Как работать с ботом ❓" }],
+                  [{ text: "Мерч 🛒" }],
+                  [{ text: "Logout" }],
+                ],
+                one_time_keyboard: true,
+                resize_keyboard: true,
+              },
+            }
+          );
+
+          if (updatedUser) {
+            updatedUser.messageIds.push(sentMessage.message_id);
+            await updatedUser.save();
           }
-        );
-
-        if (updatedUser) {
-          updatedUser.messageIds.push(sentMessage.message_id);
-          await updatedUser.save();
-        }
-      } else if (text && checkAdminPassword(text)) {
-        const updatedUser = await User.findOneAndUpdate(
-          { chatId },
-          { authenticated: true, isAdmin: true },
-          { upsert: true, new: true }
-        );
-
-        const sentMessage = await bot.sendMessage(
-          chatId,
-          "Вы вошли как администратор! Выберите раздел.",
-          {
-            reply_markup: {
-              keyboard: [
-                [{ text: "Управление уроками 📚" }],
-                [{ text: "Управление мерчем 🛒" }],
-                [{ text: "Управление паролями 🛠" }],
-                [{ text: "Logout" }],
-              ],
-              one_time_keyboard: true,
-              resize_keyboard: true,
-            },
+        } else {
+          const sentMessage = await bot.sendMessage(
+            chatId,
+            "Пароль неверный, попробуйте снова."
+          );
+          if (user) {
+            user.messageIds.push(sentMessage.message_id);
+            await user.save();
           }
-        );
-
-        if (updatedUser) {
-          updatedUser.messageIds.push(sentMessage.message_id);
-          await updatedUser.save();
         }
-      } else if (text) {
+      } else if (text && text.startsWith("lesson")) {
+        const lessonNumber = parseInt(text.split(" ")[0].replace("lesson", ""));
+        const password = text.split(" ")[1];
+        if (!isNaN(lessonNumber) && checkLessonPassword(password, lessonNumber)) {
+          const updatedUser = await User.findOneAndUpdate(
+            { chatId },
+            { authenticated: true, isAdmin: false, $addToSet: { lessonAccess: lessonNumber } },
+            { upsert: true, new: true }
+          );
+
+          const sentMessage = await bot.sendMessage(
+            chatId,
+            `Пароль верный! Вы получили доступ к уроку ${lessonNumber}. Выберите раздел.`,
+            {
+              reply_markup: {
+                keyboard: [
+                  [{ text: "Видео Курсы 🎉" }],
+                  [{ text: "Гайды 🥋" }],
+                  [{ text: "Отзывы 💬" }],
+                  [{ text: "Помощь 🚨" }],
+                  [{ text: "Как работать с ботом ❓" }],
+                  [{ text: "Мерч 🛒" }],
+                  [{ text: "Logout" }],
+                ],
+                one_time_keyboard: true,
+                resize_keyboard: true,
+              },
+            }
+          );
+
+          if (updatedUser) {
+            updatedUser.messageIds.push(sentMessage.message_id);
+            await updatedUser.save();
+          }
+        } else {
+          const sentMessage = await bot.sendMessage(
+            chatId,
+            "Пароль неверный, попробуйте снова."
+          );
+          if (user) {
+            user.messageIds.push(sentMessage.message_id);
+            await user.save();
+          }
+        }
+      } else {
         const sentMessage = await bot.sendMessage(
           chatId,
           "Пароль неверный, попробуйте снова."
