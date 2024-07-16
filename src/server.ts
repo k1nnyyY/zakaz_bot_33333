@@ -759,7 +759,11 @@ await mongoose
             }
 
             if (filePath) {
-              bot.sendDocument(chatId, filePath);
+              bot.sendDocument(chatId, filePath).then(() => {
+                console.log(`Document ${filePath} sent successfully.`);
+              }).catch((error) => {
+                console.error(`Error sending document ${filePath}:`, error);
+              });
             }
 
             const sentMessage = await bot.sendMessage(
