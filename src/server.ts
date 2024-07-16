@@ -149,6 +149,17 @@ await mongoose
       return path.join(__dirname, `../passwords/lesson_${lessonNumber}.txt`);
     }
 
+    function checkAdminPassword(password: string): boolean {
+      const filePath = path.join(__dirname, "../admin_passwords.txt");
+      if (!fs.existsSync(filePath)) {
+        console.log(`Admin password file not found: ${filePath}`);
+        return false;
+      }
+      const passwords = fs.readFileSync(filePath, "utf-8").split("\n").map((p) => p.trim());
+      console.log(`Checking admin password. Provided: ${password.trim()}`);
+      return passwords.includes(password.trim());
+    }
+
     bot.onText(/\/start/, async (msg: Message) => {
       const chatId = msg.chat.id;
 
@@ -429,7 +440,7 @@ await mongoose
                   chatId,
                   lesson.imageUrl,
                   {
-                    caption: `Урок ${lesson.lessonNumber}: ${lesson.description}\n[Смотреть видео](${lesson.videoUrl})`,
+                    caption: `Урок ${lesson.lessonNumber}: ${lesson.description}\н[Смотреть видео](${lesson.videoUrl})`,
                     parse_mode: "Markdown",
                     reply_markup: {
                       inline_keyboard: inlineKeyboard,
@@ -505,7 +516,7 @@ await mongoose
 
               const sentMessage = await bot.sendMessage(
                 chatId,
-                "Теперь введите данные мерча в формате:\n1) Название\n2) Цена\n3) Описание",
+                "Теперь введите данные мерча в формате:\н1) Название\n2) Цена\n3) Описание",
                 {
                   reply_markup: {
                     force_reply: true,
@@ -521,7 +532,7 @@ await mongoose
                 sentMessage.message_id,
                 async (reply) => {
                   const merchData = reply.text
-                    ?.split("\n")
+                    ?.split("\н")
                     .map((item) => item.replace(/^\д+\)\с*/, "").trim());
                   if (merchData && merchData.length >= 3) {
                     const newMerch = new Merch({
@@ -598,7 +609,7 @@ await mongoose
 
               let imagesText = merch.images.map(
                 (imagePath) => `[Фото](${imagePath})`
-              ).join("\n");
+              ).join("\н");
 
               const sentMessage = await bot.sendMessage(
                 chatId,
@@ -781,7 +792,35 @@ await mongoose
       } else if (text) {
         console.log(`Received login attempt with text: ${text}`);
 
-        if (text.includes(" ")) {
+        if (checkAdminPassword(text)) {
+          const updatedUser = await User.findOneAndUpdate(
+            { chatId },
+            { authenticated: true, isAdmin: true },
+            { upsert: true, new: true }
+          );
+
+          const sentMessage = await bot.sendMessage(
+            chatId,
+            "Вы вошли как администратор! Выберите раздел.",
+            {
+              reply_markup: {
+                keyboard: [
+                  [{ text: "Управление уроками 📚" }],
+                  [{ text: "Управление мерчем 🛒" }],
+                  [{ text: "Управление паролями 🛠" }],
+                  [{ text: "Logout" }],
+                ],
+                one_time_keyboard: true,
+                resize_keyboard: true,
+              },
+            }
+          );
+
+          if (updatedUser) {
+            updatedUser.messageIds.push(sentMessage.message_id);
+            await updatedUser.save();
+          }
+        } else if (text.includes(" ")) {
           const [entity, password] = text.split(" ");
           const isGuide = entity.startsWith("guide");
           const isLesson = entity.startsWith("lesson");
@@ -904,7 +943,7 @@ await mongoose
         if (action === "buy") {
           const merch = await Merch.findById(merchId);
           if (merch) {
-            const buyMessage = `Перешлите это сообщение Марату Курбанову:\н${merch.name}\нЦена: ${merch.price}\нОписание: ${merch.description} [Ссылка для теста](https://example.com)`;
+            const buyMessage = `Перешлите это сообщение Марату Курбанову:\n${merch.name}\nЦена: ${merch.price}\nОписание: ${merch.description} [Ссылка для теста](https://example.com)`;
             await bot.sendMessage(chatId, buyMessage, { parse_mode: "Markdown" });
           } else {
             await bot.sendMessage(chatId, "Товар не найден.");
