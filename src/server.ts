@@ -177,14 +177,16 @@ await mongoose
               [{ text: "Logout" }],
             ]
           : [
+              user.guideAccess.includes("guide1") ? [{ text: "Гайды 🥋" }] : [],
+              user.guideAccess.includes("guide2") ? [{ text: "Гайды 🥋" }] : [],
+              user.guideAccess.includes("guide3") ? [{ text: "Гайды 🥋" }] : [],
               [{ text: "Видео Курсы 🎉" }],
-              [{ text: "Гайды 🥋" }],
               [{ text: "Отзывы 💬" }],
               [{ text: "Помощь 🚨" }],
               [{ text: "Как работать с ботом ❓" }],
               [{ text: "Мерч 🛒" }],
               [{ text: "Logout" }],
-            ];
+            ].filter(button => button.length > 0);
 
         const sentMessage = await bot.sendMessage(chatId, message, {
           reply_markup: {
