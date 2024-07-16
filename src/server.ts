@@ -120,7 +120,7 @@ await mongoose
       }
     }
 
-    const guidePasswords = {
+    const guidePasswords:any = {
       guide1: "guide1_password",
       guide2: "guide2_password",
       guide3: "guide3_password",
