@@ -101,7 +101,7 @@ await mongoose
 
     const imagesPath = path.join(__dirname, "images");
     const passwordsPath = path.join(__dirname, "../passwords");
-    const guidesPath = path.join(__dirname,"src/" "assets");
+    const guidesPath = path.join(__dirname,"src/" ,"assets");
 
     if (!fs.existsSync(imagesPath)) {
       fs.mkdirSync(imagesPath);
