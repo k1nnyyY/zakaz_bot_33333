@@ -169,7 +169,7 @@ await mongoose
           ? "Вы вошли как администратор! Выберите раздел."
           : "Вы уже вошли в систему! Выберите раздел.";
 
-        const keyboard: KeyboardButton[][] = user.isAdmin
+        const keyboard = user.isAdmin
           ? [
               [{ text: "Управление уроками 📚" }],
               [{ text: "Управление мерчем 🛒" }],
@@ -177,16 +177,16 @@ await mongoose
               [{ text: "Logout" }],
             ]
           : [
-              ...(user.guideAccess.includes("guide1") ? [[{ text: "Гайды 🥋" }]] : []),
-              ...(user.guideAccess.includes("guide2") ? [[{ text: "Гайды 🥋" }]] : []),
-              ...(user.guideAccess.includes("guide3") ? [[{ text: "Гайды 🥋" }]] : []),
+              user.guideAccess.includes("guide1") ? [{ text: "Гайды 🥋" }] : [],
+              user.guideAccess.includes("guide2") ? [{ text: "Гайды 🥋" }] : [],
+              user.guideAccess.includes("guide3") ? [{ text: "Гайды 🥋" }] : [],
               [{ text: "Видео Курсы 🎉" }],
               [{ text: "Отзывы 💬" }],
               [{ text: "Помощь 🚨" }],
               [{ text: "Как работать с ботом ❓" }],
               [{ text: "Мерч 🛒" }],
               [{ text: "Logout" }],
-            ];
+            ].filter(button => button.length > 0);
 
         const sentMessage = await bot.sendMessage(chatId, message, {
           reply_markup: {
@@ -676,7 +676,7 @@ await mongoose
 
             let guideButtons = guides.map(guide => [{ text: `Пароль для гайда ${guide}` }]);
             let lessonButtons = lessons.map(lesson => [{ text: `Пароль для урока ${lesson.lessonNumber} (${lesson.description})` }]);
-            const keyboard: KeyboardButton[][] = guideButtons.concat(lessonButtons).concat([[{ text: "Назад" }]]);
+            const keyboard = guideButtons.concat(lessonButtons).concat([[{ text: "Назад" }]]);
 
             const sentMessage = await bot.sendMessage(
               chatId,
@@ -722,7 +722,7 @@ await mongoose
 
             let guideButtons = guides.map(guide => [{ text: `Удалить пароль для гайда ${guide}` }]);
             let lessonButtons = lessons.map(lesson => [{ text: `Удалить пароль для урока ${lesson.lessonNumber} (${lesson.description})` }]);
-            const keyboard: KeyboardButton[][] = guideButtons.concat(lessonButtons).concat([[{ text: "Назад" }]]);
+            const keyboard = guideButtons.concat(lessonButtons).concat([[{ text: "Назад" }]]);
 
             const sentMessage = await bot.sendMessage(
               chatId,
@@ -843,10 +843,8 @@ await mongoose
               {
                 reply_markup: {
                   keyboard: [
-                    ...(updatedUser?.guideAccess.includes("guide1") ? [{ text: "Гайды 🥋" }] : []),
-                    ...(updatedUser?.guideAccess.includes("guide2") ? [{ text: "Гайды 🥋" }] : []),
-                    ...(updatedUser?.guideAccess.includes("guide3") ? [{ text: "Гайды 🥋" }] : []),
                     [{ text: "Видео Курсы 🎉" }],
+                    [{ text: "Гайды 🥋" }],
                     [{ text: "Отзывы 💬" }],
                     [{ text: "Помощь 🚨" }],
                     [{ text: "Как работать с ботом ❓" }],
@@ -879,10 +877,8 @@ await mongoose
                 {
                   reply_markup: {
                     keyboard: [
-                      ...(updatedUser?.guideAccess.includes("guide1") ? [[{ text: "Гайды 🥋" }]] : []),
-                      ...(updatedUser?.guideAccess.includes("guide2") ? [[{ text: "Гайды 🥋" }]] : []),
-                      ...(updatedUser?.guideAccess.includes("guide3") ? [[{ text: "Гайды 🥋" }]] : []),
                       [{ text: "Видео Курсы 🎉" }],
+                      [{ text: "Гайды 🥋" }],
                       [{ text: "Отзывы 💬" }],
                       [{ text: "Помощь 🚨" }],
                       [{ text: "Как работать с ботом ❓" }],
@@ -949,7 +945,7 @@ await mongoose
         if (action === "buy") {
           const merch = await Merch.findById(merchId);
           if (merch) {
-            const buyMessage = `Перешлите это сообщение Марату Курбанову:\н${merch.name}\нЦена: ${merch.price}\нОписание: ${merch.description} [Ссылка для теста](https://example.com)`;
+            const buyMessage = `Перешлите это сообщение Марату Курбанову:\n${merch.name}\nЦена: ${merch.price}\nОписание: ${merch.description} [Ссылка для теста](https://example.com)`;
             await bot.sendMessage(chatId, buyMessage, { parse_mode: "Markdown" });
           } else {
             await bot.sendMessage(chatId, "Товар не найден.");
