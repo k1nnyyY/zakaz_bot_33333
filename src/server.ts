@@ -749,6 +749,19 @@ await mongoose
               { upsert: true, new: true }
             );
 
+            let filePath;
+            if (entity === "guide1") {
+              filePath = path.join(__dirname, "../src/assets/Гайд по набору мышечной массы.pdf");
+            } else if (entity === "guide2") {
+              filePath = path.join(__dirname, "../src/assets/ГАЙД ПО СНИЖЕНИЮ ВЕСА.pdf");
+            } else if (entity === "guide3") {
+              filePath = path.join(__dirname, "../src/assets/Гайд_по_подготовки_к_турнирам_по_грэпплингу (1).pdf");
+            }
+
+            if (filePath) {
+              bot.sendDocument(chatId, filePath);
+            }
+
             const sentMessage = await bot.sendMessage(
               chatId,
               `Пароль верный! Вы получили доступ к гайду ${entity}. Выберите раздел.`,
