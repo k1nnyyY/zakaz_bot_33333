@@ -127,9 +127,9 @@ await mongoose
     };
 
     const guideFiles: any = {
-      guide1: path.join(guidesPath, "Гайд по набору мышечной массы.pdf"),
-      guide2: path.join(guidesPath, "ГАЙД ПО СНИЖЕНИЮ ВЕСА.pdf"),
-      guide3: path.join(guidesPath, "Гайд_по_подготовки_к_турнирам_по_грэпплингу (1).pdf"),
+      guide1: path.join(__dirname, "assets", "Гайд по набору мышечной массы.pdf"),
+      guide2: path.join(__dirname, "assets", "ГАЙД ПО СНИЖЕНИЮ ВЕСА.pdf"),
+      guide3: path.join(__dirname, "assets", "Гайд_по_подготовки_к_турнирам_по_грэпплингу (1).pdf"),
     };
 
     function checkGuidePassword(password: string, guide: string): boolean {
