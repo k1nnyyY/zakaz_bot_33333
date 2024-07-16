@@ -101,6 +101,7 @@ await mongoose
 
     const imagesPath = path.join(__dirname, "images");
     const passwordsPath = path.join(__dirname, "../passwords");
+    const guidesPath = path.join(__dirname, "assets");
 
     if (!fs.existsSync(imagesPath)) {
       fs.mkdirSync(imagesPath);
@@ -118,6 +119,18 @@ await mongoose
         fs.writeFileSync(guideFilePath, `password_${guide}`);
       }
     }
+
+    const guidePasswords = {
+      guide1: "2323",
+      guide2: "2222",
+      guide3: "3333",
+    };
+
+    const guideFiles = {
+      guide1: path.join(guidesPath, "Гайд по набору мышечной массы.pdf"),
+      guide2: path.join(guidesPath, "ГАЙД ПО СНИЖЕНИЮ ВЕСА.pdf"),
+      guide3: path.join(guidesPath, "Гайд_по_подготовки_к_турнирам_по_грэпплингу (1).pdf"),
+    };
 
     function checkGuidePassword(password: string, guide: string): boolean {
       const filePath = getPasswordFilePathForGuide(guide);
