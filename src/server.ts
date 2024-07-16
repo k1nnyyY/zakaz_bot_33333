@@ -177,9 +177,9 @@ await mongoose
               [{ text: "Logout" }],
             ]
           : [
-              user.guideAccess.includes("guide1") ? [{ text: "Гайды 🥋" }] : [],
-              user.guideAccess.includes("guide2") ? [{ text: "Гайды 🥋" }] : [],
-              user.guideAccess.includes("guide3") ? [{ text: "Гайды 🥋" }] : [],
+              ...(user.guideAccess.includes("guide1") ? [{ text: "Гайды 🥋" }] : []),
+              ...(user.guideAccess.includes("guide2") ? [{ text: "Гайды 🥋" }] : []),
+              ...(user.guideAccess.includes("guide3") ? [{ text: "Гайды 🥋" }] : []),
               [{ text: "Видео Курсы 🎉" }],
               [{ text: "Отзывы 💬" }],
               [{ text: "Помощь 🚨" }],
@@ -843,14 +843,16 @@ await mongoose
               {
                 reply_markup: {
                   keyboard: [
+                    ...(updatedUser.guideAccess.includes("guide1") ? [{ text: "Гайды 🥋" }] : []),
+                    ...(updatedUser.guideAccess.includes("guide2") ? [{ text: "Гайды 🥋" }] : []),
+                    ...(updatedUser.guideAccess.includes("guide3") ? [{ text: "Гайды 🥋" }] : []),
                     [{ text: "Видео Курсы 🎉" }],
-                    [{ text: "Гайды 🥋" }],
                     [{ text: "Отзывы 💬" }],
                     [{ text: "Помощь 🚨" }],
                     [{ text: "Как работать с ботом ❓" }],
                     [{ text: "Мерч 🛒" }],
                     [{ text: "Logout" }],
-                  ],
+                  ].filter(button => button.length > 0),
                   one_time_keyboard: true,
                   resize_keyboard: true,
                 },
@@ -877,14 +879,16 @@ await mongoose
                 {
                   reply_markup: {
                     keyboard: [
+                      ...(updatedUser.guideAccess.includes("guide1") ? [{ text: "Гайды 🥋" }] : []),
+                      ...(updatedUser.guideAccess.includes("guide2") ? [{ text: "Гайды 🥋" }] : []),
+                      ...(updatedUser.guideAccess.includes("guide3") ? [{ text: "Гайды 🥋" }] : []),
                       [{ text: "Видео Курсы 🎉" }],
-                      [{ text: "Гайды 🥋" }],
                       [{ text: "Отзывы 💬" }],
                       [{ text: "Помощь 🚨" }],
                       [{ text: "Как работать с ботом ❓" }],
                       [{ text: "Мерч 🛒" }],
                       [{ text: "Logout" }],
-                    ],
+                    ].filter(button => button.length > 0),
                     one_time_keyboard: true,
                     resize_keyboard: true,
                   },
@@ -945,7 +949,7 @@ await mongoose
         if (action === "buy") {
           const merch = await Merch.findById(merchId);
           if (merch) {
-            const buyMessage = `Перешлите это сообщение Марату Курбанову:\n${merch.name}\nЦена: ${merch.price}\nОписание: ${merch.description} [Ссылка для теста](https://example.com)`;
+            const buyMessage = `Перешлите это сообщение Марату Курбанову:\n${merch.name}\нЦена: ${merch.price}\нОписание: ${merch.description} [Ссылка для теста](https://example.com)`;
             await bot.sendMessage(chatId, buyMessage, { parse_mode: "Markdown" });
           } else {
             await bot.sendMessage(chatId, "Товар не найден.");
