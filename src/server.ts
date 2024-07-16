@@ -186,11 +186,11 @@ await mongoose
               [{ text: "Как работать с ботом ❓" }],
               [{ text: "Мерч 🛒" }],
               [{ text: "Logout" }],
-            ].filter(button => button.length > 0);
+            ];
 
         const sentMessage = await bot.sendMessage(chatId, message, {
           reply_markup: {
-            keyboard: keyboard,
+            keyboard: keyboard.filter(button => Array.isArray(button) ? button.length > 0 : true),
             one_time_keyboard: true,
             resize_keyboard: true,
           },
@@ -843,16 +843,16 @@ await mongoose
               {
                 reply_markup: {
                   keyboard: [
-                    ...(updatedUser.guideAccess.includes("guide1") ? [{ text: "Гайды 🥋" }] : []),
-                    ...(updatedUser.guideAccess.includes("guide2") ? [{ text: "Гайды 🥋" }] : []),
-                    ...(updatedUser.guideAccess.includes("guide3") ? [{ text: "Гайды 🥋" }] : []),
+                    ...(updatedUser?.guideAccess.includes("guide1") ? [{ text: "Гайды 🥋" }] : []),
+                    ...(updatedUser?.guideAccess.includes("guide2") ? [{ text: "Гайды 🥋" }] : []),
+                    ...(updatedUser?.guideAccess.includes("guide3") ? [{ text: "Гайды 🥋" }] : []),
                     [{ text: "Видео Курсы 🎉" }],
                     [{ text: "Отзывы 💬" }],
                     [{ text: "Помощь 🚨" }],
                     [{ text: "Как работать с ботом ❓" }],
                     [{ text: "Мерч 🛒" }],
                     [{ text: "Logout" }],
-                  ].filter(button => button.length > 0),
+                  ].filter(button => Array.isArray(button) ? button.length > 0 : true),
                   one_time_keyboard: true,
                   resize_keyboard: true,
                 },
@@ -879,16 +879,16 @@ await mongoose
                 {
                   reply_markup: {
                     keyboard: [
-                      ...(updatedUser.guideAccess.includes("guide1") ? [{ text: "Гайды 🥋" }] : []),
-                      ...(updatedUser.guideAccess.includes("guide2") ? [{ text: "Гайды 🥋" }] : []),
-                      ...(updatedUser.guideAccess.includes("guide3") ? [{ text: "Гайды 🥋" }] : []),
+                      ...(updatedUser?.guideAccess.includes("guide1") ? [{ text: "Гайды 🥋" }] : []),
+                      ...(updatedUser?.guideAccess.includes("guide2") ? [{ text: "Гайды 🥋" }] : []),
+                      ...(updatedUser?.guideAccess.includes("guide3") ? [{ text: "Гайды 🥋" }] : []),
                       [{ text: "Видео Курсы 🎉" }],
                       [{ text: "Отзывы 💬" }],
                       [{ text: "Помощь 🚨" }],
                       [{ text: "Как работать с ботом ❓" }],
                       [{ text: "Мерч 🛒" }],
                       [{ text: "Logout" }],
-                    ].filter(button => button.length > 0),
+                    ].filter(button => Array.isArray(button) ? button.length > 0 : true),
                     one_time_keyboard: true,
                     resize_keyboard: true,
                   },
@@ -949,7 +949,7 @@ await mongoose
         if (action === "buy") {
           const merch = await Merch.findById(merchId);
           if (merch) {
-            const buyMessage = `Перешлите это сообщение Марату Курбанову:\n${merch.name}\нЦена: ${merch.price}\нОписание: ${merch.description} [Ссылка для теста](https://example.com)`;
+            const buyMessage = `Перешлите это сообщение Марату Курбанову:\н${merch.name}\нЦена: ${merch.price}\нОписание: ${merch.description} [Ссылка для теста](https://example.com)`;
             await bot.sendMessage(chatId, buyMessage, { parse_mode: "Markdown" });
           } else {
             await bot.sendMessage(chatId, "Товар не найден.");
