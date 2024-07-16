@@ -740,7 +740,7 @@ await mongoose
                   if (fs.existsSync(filePath)) {
                     fs.unlinkSync(filePath);
                   }
-                } else if (lesson) {
+                } else if (isLesson) {
                   const lessonNumber = parseInt(entity!.split(" ")[0]);
                   const filePath = getPasswordFilePathForLesson(lessonNumber);
                   if (fs.existsSync(filePath)) {
