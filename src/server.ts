@@ -239,7 +239,7 @@ await mongoose
 
           const sentMessage = await bot.sendMessage(
             chatId,
-            `${merch.name}\nЦена: ${merch.price}\nОписание: ${merch.description}\n${imagesText}`,
+            `${merch.name}\nЦена: ${merch.price}\нОписание: ${merch.description}\н${imagesText}`,
             {
               reply_markup: {
                 inline_keyboard: inlineKeyboard,
@@ -325,7 +325,7 @@ await mongoose
 
                   const sentMessage = await bot.sendMessage(
                     chatId,
-                    "Теперь введите данные урока в формате:\n1) Плейлист\n2) Номер урока\n3) URL видео\n4) Описание\n5) Есть подуроки (да/нет)",
+                    "Теперь введите данные урока в формате:\н1) Плейлист\n2) Номер урока\n3) URL видео\n4) Описание\n5) Есть подуроки (да/нет)",
                     {
                       reply_markup: {
                         force_reply: true,
@@ -341,8 +341,8 @@ await mongoose
                     sentMessage.message_id,
                     async (reply) => {
                       const lessonData = reply.text
-                        ?.split("\n")
-                        .map((item) => item.replace(/^\д+\)\s*/, "").trim());
+                        ?.split("\н")
+                        .map((item) => item.replace(/^\д+\)\с*/, "").trim());
                       if (lessonData && lessonData.length >= 5) {
                         const newLesson = new Lesson({
                           playlist: lessonData[0],
