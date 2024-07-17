@@ -9,6 +9,7 @@ import dbConnectionString from "./dbConfig.js";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 import https from "https";
+import { PDFDocument } from 'pdf-lib';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -126,11 +127,27 @@ await mongoose
       guide3: "3333",
     };
 
-    const guideFiles: any = {
+    const guideFiles2: any = {
       guide1: path.join(guidesPath, "Гайд по набору мышечной массы.pdf"),
       guide2: path.join(guidesPath, "ГАЙД ПО СНИЖЕНИЮ ВЕСА.pdf"),
       guide3: path.join(guidesPath, "Гайд_по_подготовки_к_турнирам_по_грэпплингу (1).pdf"),
     };
+    
+    const guideFiles: any = {
+      guide1: path.join(guidesPath, "Гайд по набору мышечной массы_compressed.pdf"),
+      guide2: path.join(guidesPath, "ГАЙД ПО СНИЖЕНИЮ ВЕСА_compressed.pdf"),
+      guide3: path.join(guidesPath, "Гайд_по_подготовки_к_турнирам_по_грэпплингу (1)_compressed.pdf"),
+    };
+    
+    async function compressPDF(inputPath: string, outputPath: string) {
+      const existingPdfBytes = fs.readFileSync(inputPath);
+      const pdfDoc = await PDFDocument.load(existingPdfBytes);
+    
+      const pdfBytes = await pdfDoc.save({ useObjectStreams: false });
+    
+      fs.writeFileSync(outputPath, pdfBytes);
+    }
+    
 
     function checkGuidePassword(password: string, guide: string): boolean {
       const filePath = getPasswordFilePathForGuide(guide);

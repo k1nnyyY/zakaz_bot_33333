@@ -15,6 +15,7 @@
     "fs": "^0.0.1-security",
     "mongoose": "^8.4.4",
     "node-telegram-bot-api": "^0.66.0",
+    "pdf-lib": "^1.17.1",
     "pg": "^8.12.0",
     "reflect-metadata": "^0.2.2",
     "sqlite3": "^5.1.7",
