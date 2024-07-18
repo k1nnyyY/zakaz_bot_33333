@@ -600,7 +600,7 @@ await mongoose
               sentMessage.message_id,
               async (reply) => {
                 const merchName = reply.text?.trim();
-                if (мерчName) {
+                if (merchName) {
                   await Merch.deleteOne({ name: merchName });
                   await bot.sendMessage(chatId, "Мерч удален.");
                 } else {
@@ -635,7 +635,7 @@ await mongoose
 
               const sentMessage = await bot.sendMessage(
                 chatId,
-                `${мерч.name}\нЦена: ${мерч.price}\нОписание: ${мерч.description}\н${imagesText}`,
+                `${merch.name}\нЦена: ${merch.price}\нОписание: ${merch.description}\н${imagesText}`,
                 {
                   reply_markup: {
                     inline_keyboard: inlineKeyboard,
@@ -953,7 +953,7 @@ await mongoose
         if (action === "buy") {
           const merch = await Merch.findById(merchId);
           if (merch) {
-            const buyMessage = `Перешлите это сообщение Марату Курбанову:\n${merch.name}\нЦена: ${merch.price}\нОписание: ${merч.description} [Ссылка для теста](https://example.com)`;
+            const buyMessage = `Перешлите это сообщение Марату Курбанову:\n${merch.name}\нЦена: ${merch.price}\нОписание: ${merch.description} [Ссылка для теста](https://example.com)`;
             await bot.sendMessage(chatId, buyMessage, { parse_mode: "Markdown" });
           } else {
             await bot.sendMessage(chatId, "Товар не найден.");
