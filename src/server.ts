@@ -16,7 +16,7 @@ const __dirname = dirname(__filename);
 
 dotenv.config();
 
-const adminPasswordFile = path.join("../admin_passwords.txt");
+const adminPasswordFile = path.join(__dirname, "../passwords");
 
 let adminPasswords: string[] = [];
 
