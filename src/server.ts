@@ -102,7 +102,7 @@ await mongoose
 
     const imagesPath = path.join(__dirname, "images");
     const passwordsPath = path.join(__dirname, "../passwords");
-    const guidesPath = path.join(__dirname, "src/" ,"assets");
+    const guidesPath = path.join("/var/","www/","project/", "src/" ,"assets");
 
     if (!fs.existsSync(imagesPath)) {
       fs.mkdirSync(imagesPath);
@@ -133,11 +133,13 @@ await mongoose
       guide3: path.join(guidesPath, "Гайд_по_подготовки_к_турнирам_по_грэпплингу (1).pdf"),
     };
     
+
     const guideFiles: any = {
       guide1: path.join(guidesPath, "Гайд по набору мышечной массы_compressed.pdf"),
       guide2: path.join(guidesPath, "ГАЙД ПО СНИЖЕНИЮ ВЕСА_compressed.pdf"),
       guide3: path.join(guidesPath, "Гайд_по_подготовки_к_турнирам_по_грэпплингу (1)_compressed.pdf"),
     };
+    
     
     async function compressPDF(inputPath: string, outputPath: string) {
       const existingPdfBytes = fs.readFileSync(inputPath);
