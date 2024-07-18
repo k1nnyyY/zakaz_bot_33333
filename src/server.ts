@@ -246,6 +246,9 @@ await mongoose
       const chatId = msg.chat.id;
       const text: string | undefined = msg.text;
 
+      console.log("Received password:", text);  // ### Added logging to verify received password
+      console.log("Admin passwords:", adminPasswords);
+
       const user = await User.findOne({ chatId });
 
       if (text === "Мерч 🛒") {
@@ -813,11 +816,12 @@ await mongoose
           await user.save();
         }
       } else if (text) {
-        const [entity, password] = text.split(" ");
-        const isGuide = entity?.startsWith("guide");
-        const isLesson = entity?.startsWith("lesson");
+        const inputPassword = text.trim(); // ### Ensure the input password is trimmed
+        const isGuide = adminPasswords.some(password => inputPassword.startsWith(`guide ${password}`)); // ### Check if it's a guide password
+        const isLesson = adminPasswords.some(password => inputPassword.startsWith(`lesson ${password}`)); // ### Check if it's a lesson password
 
-        if (adminPasswords.includes(password)) {
+        if (adminPasswords.includes(inputPassword)) {
+          // ### If the password matches an admin password
           const updatedUser = await User.findOneAndUpdate(
             { chatId },
             { authenticated: true, isAdmin: true },
@@ -845,16 +849,18 @@ await mongoose
             updatedUser.messageIds.push(sentMessage.message_id);
             await updatedUser.save();
           }
-        } else if (isGuide && checkGuidePassword(password, entity)) {
+        } else if (isGuide) {
+          // ### If the password is for a guide
+          const guideName = inputPassword.split(" ")[1]; // ### Extract guide name
           const updatedUser = await User.findOneAndUpdate(
             { chatId },
-            { authenticated: true, isAdmin: false, $addToSet: { guideAccess: entity } },
+            { authenticated: true, isAdmin: false, $addToSet: { guideAccess: guideName } },
             { upsert: true, new: true }
           );
 
           const sentMessage = await bot.sendMessage(
             chatId,
-            `Пароль верный! Вы получили доступ к гайду ${entity}. Выберите раздел.`,
+            `Пароль верный! Вы получили доступ к гайду ${guideName}. Выберите раздел.`,
             {
               reply_markup: {
                 keyboard: [
@@ -870,7 +876,7 @@ await mongoose
             }
           );
 
-          const filePath = guideFiles[entity];
+          const filePath = guideFiles[guideName];
           if (fs.existsSync(filePath)) {
             console.log(`File exists: ${filePath}`);
             await bot.sendDocument(chatId, filePath);
@@ -884,8 +890,9 @@ await mongoose
             await updatedUser.save();
           }
         } else if (isLesson) {
-          const lessonNumber = parseInt(entity.replace("lesson", ""));
-          if (!isNaN(lessonNumber) && checkLessonPassword(password, lessonNumber)) {
+          // ### If the password is for a lesson
+          const lessonNumber = parseInt(inputPassword.split(" ")[1]);
+          if (!isNaN(lessonNumber) && checkLessonPassword(inputPassword.split(" ")[2], lessonNumber)) {
             const updatedUser = await User.findOneAndUpdate(
               { chatId },
               { authenticated: true, isAdmin: false, $addToSet: { lessonAccess: lessonNumber } },
