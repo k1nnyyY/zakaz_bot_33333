@@ -16,7 +16,19 @@ const __dirname = dirname(__filename);
 
 dotenv.config();
 
-const adminPassword = "admin_pass"; // Убедитесь, что это совпадает с паролем, который вы вводите
+const adminPasswordFile = path.join(__dirname, "admin_passwords.txt");
+
+let adminPasswords: string[] = [];
+
+if (fs.existsSync(adminPasswordFile)) {
+  adminPasswords = fs.readFileSync(adminPasswordFile, "utf-8")
+    .split("\n")
+    .map(password => password.trim())
+    .filter(password => password.length > 0);
+  console.log("Admin passwords loaded:", adminPasswords);
+} else {
+  console.log("Admin password file not found.");
+}
 
 interface ILesson extends Document {
   playlist: string;
@@ -542,7 +554,7 @@ await mongoose
                 sentMessage.message_id,
                 async (reply) => {
                   const merchData = reply.text
-                    ?.split("\n")
+                    ?.split("\н")
                     .map((item) => item.replace(/^\д+\)\s*/, "").trim());
                   if (merchData && merchData.length >= 3) {
                     const newMerch = new Merch({
@@ -588,7 +600,7 @@ await mongoose
               sentMessage.message_id,
               async (reply) => {
                 const merchName = reply.text?.trim();
-                if (merchName) {
+                if (мерчName) {
                   await Merch.deleteOne({ name: merchName });
                   await bot.sendMessage(chatId, "Мерч удален.");
                 } else {
@@ -623,7 +635,7 @@ await mongoose
 
               const sentMessage = await bot.sendMessage(
                 chatId,
-                `${merch.name}\нЦена: ${merch.price}\нОписание: ${merch.description}\н${imagesText}`,
+                `${мерч.name}\нЦена: ${мерч.price}\нОписание: ${мерч.description}\н${imagesText}`,
                 {
                   reply_markup: {
                     inline_keyboard: inlineKeyboard,
@@ -804,7 +816,7 @@ await mongoose
         const isGuide = entity?.startsWith("guide");
         const isLesson = entity?.startsWith("lesson");
 
-        if (password === adminPassword) {
+        if (adminPasswords.includes(password)) {
           const updatedUser = await User.findOneAndUpdate(
             { chatId },
             { authenticated: true, isAdmin: true },
@@ -941,7 +953,7 @@ await mongoose
         if (action === "buy") {
           const merch = await Merch.findById(merchId);
           if (merch) {
-            const buyMessage = `Перешлите это сообщение Марату Курбанову:\n${merch.name}\нЦена: ${merch.price}\нОписание: ${merch.description} [Ссылка для теста](https://example.com)`;
+            const buyMessage = `Перешлите это сообщение Марату Курбанову:\n${merch.name}\нЦена: ${merch.price}\нОписание: ${merч.description} [Ссылка для теста](https://example.com)`;
             await bot.sendMessage(chatId, buyMessage, { parse_mode: "Markdown" });
           } else {
             await bot.sendMessage(chatId, "Товар не найден.");
