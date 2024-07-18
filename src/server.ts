@@ -27,7 +27,7 @@ if (fs.existsSync(adminPasswordFile)) {
     .filter(password => password.length > 0);
   console.log("Admin passwords loaded:", adminPasswords);
 } else {
-  console.log("Admin password file not found.");
+  console.log("Admin password file not found." , adminPasswords);
 }
 
 interface ILesson extends Document {
