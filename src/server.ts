@@ -16,7 +16,7 @@ const __dirname = dirname(__filename);
 
 dotenv.config();
 
-const adminPassword = "admin_pass";
+const adminPassword = "admin_pass"; // Убедитесь, что это совпадает с паролем, который вы вводите
 
 interface ILesson extends Document {
   playlist: string;
