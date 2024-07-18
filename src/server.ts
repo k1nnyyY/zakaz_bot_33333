@@ -16,6 +16,8 @@ const __dirname = dirname(__filename);
 
 dotenv.config();
 
+const adminPassword = "admin_pass";
+
 interface ILesson extends Document {
   playlist: string;
   lessonNumber: number;
@@ -102,7 +104,7 @@ await mongoose
 
     const imagesPath = path.join(__dirname, "images");
     const passwordsPath = path.join(__dirname, "../passwords");
-    const guidesPath = path.join("/var/","www/","project/", "src/" ,"assets");
+    const guidesPath = path.join("/var/", "www/", "project/", "src/", "assets");
 
     if (!fs.existsSync(imagesPath)) {
       fs.mkdirSync(imagesPath);
@@ -132,24 +134,21 @@ await mongoose
       guide2: path.join(guidesPath, "ГАЙД ПО СНИЖЕНИЮ ВЕСА.pdf"),
       guide3: path.join(guidesPath, "Гайд_по_подготовки_к_турнирам_по_грэпплингу (1).pdf"),
     };
-    
 
     const guideFiles: any = {
       guide1: path.join(guidesPath, "Гайд по набору мышечной массы_compressed.pdf"),
       guide2: path.join(guidesPath, "ГАЙД ПО СНИЖЕНИЮ ВЕСА_compressed.pdf"),
       guide3: path.join(guidesPath, "Гайд_по_подготовки_к_турнирам_по_грэпплингу (1)_compressed.pdf"),
     };
-    
-    
+
     async function compressPDF(inputPath: string, outputPath: string) {
       const existingPdfBytes = fs.readFileSync(inputPath);
       const pdfDoc = await PDFDocument.load(existingPdfBytes);
-    
+
       const pdfBytes = await pdfDoc.save({ useObjectStreams: false });
-    
+
       fs.writeFileSync(outputPath, pdfBytes);
     }
-    
 
     function checkGuidePassword(password: string, guide: string): boolean {
       const filePath = getPasswordFilePathForGuide(guide);
@@ -624,7 +623,7 @@ await mongoose
 
               const sentMessage = await bot.sendMessage(
                 chatId,
-                `${merch.name}\nЦена: ${merch.price}\нОписание: ${merch.description}\n${imagesText}`,
+                `${merch.name}\нЦена: ${merch.price}\нОписание: ${merch.description}\н${imagesText}`,
                 {
                   reply_markup: {
                     inline_keyboard: inlineKeyboard,
@@ -667,16 +666,16 @@ await mongoose
               .filter(file => file.startsWith("lesson_"))
               .map(file => file.replace("lesson_", "").replace(".txt", ""));
 
-            let passwordsMessage = "Пароли для гайдов:\n";
+            let passwordsMessage = "Пароли для гайдов:\н";
             for (const guide of guides) {
               const password = fs.readFileSync(getPasswordFilePathForGuide(guide), "utf-8").trim();
-              passwordsMessage += `${guide}: ${password}\n`;
+              passwordsMessage += `${guide}: ${password}\н`;
             }
 
-            passwordsMessage += "\nПароли для уроков:\n";
+            passwordsMessage += "\нПароли для уроков:\н";
             for (const lesson of lessons) {
               const password = fs.readFileSync(getPasswordFilePathForLesson(parseInt(lesson)), "utf-8").trim();
-              passwordsMessage += `Урок ${lesson}: ${password}\n`;
+              passwordsMessage += `Урок ${lesson}: ${password}\н`;
             }
 
             await bot.sendMessage(chatId, passwordsMessage);
@@ -800,12 +799,40 @@ await mongoose
           user.messageIds.push(sentMessage.message_id);
           await user.save();
         }
-      } else if (text && text.split(" ").length === 2) {
+      } else if (text) {
         const [entity, password] = text.split(" ");
-        const isGuide = entity.startsWith("guide");
-        const isLesson = entity.startsWith("lesson");
+        const isGuide = entity?.startsWith("guide");
+        const isLesson = entity?.startsWith("lesson");
 
-        if (isGuide && checkGuidePassword(password, entity)) {
+        if (password === adminPassword) {
+          const updatedUser = await User.findOneAndUpdate(
+            { chatId },
+            { authenticated: true, isAdmin: true },
+            { upsert: true, new: true }
+          );
+
+          const sentMessage = await bot.sendMessage(
+            chatId,
+            "Пароль администратора верный! Вы вошли как администратор. Выберите раздел.",
+            {
+              reply_markup: {
+                keyboard: [
+                  [{ text: "Управление уроками 📚" }],
+                  [{ text: "Управление мерчем 🛒" }],
+                  [{ text: "Управление паролями 🛠" }],
+                  [{ text: "Logout" }],
+                ],
+                one_time_keyboard: true,
+                resize_keyboard: true,
+              },
+            }
+          );
+
+          if (updatedUser) {
+            updatedUser.messageIds.push(sentMessage.message_id);
+            await updatedUser.save();
+          }
+        } else if (isGuide && checkGuidePassword(password, entity)) {
           const updatedUser = await User.findOneAndUpdate(
             { chatId },
             { authenticated: true, isAdmin: false, $addToSet: { guideAccess: entity } },
@@ -894,15 +921,6 @@ await mongoose
             await user.save();
           }
         }
-      } else {
-        const sentMessage = await bot.sendMessage(
-          chatId,
-          "Пароль неверный, попробуйте снова."
-        );
-        if (user) {
-          user.messageIds.push(sentMessage.message_id);
-          await user.save();
-        }
       }
     });
 
@@ -923,7 +941,7 @@ await mongoose
         if (action === "buy") {
           const merch = await Merch.findById(merchId);
           if (merch) {
-            const buyMessage = `Перешлите это сообщение Марату Курбанову:\n${merch.name}\nЦена: ${merch.price}\nОписание: ${merch.description} [Ссылка для теста](https://example.com)`;
+            const buyMessage = `Перешлите это сообщение Марату Курбанову:\n${merch.name}\нЦена: ${merch.price}\нОписание: ${merch.description} [Ссылка для теста](https://example.com)`;
             await bot.sendMessage(chatId, buyMessage, { parse_mode: "Markdown" });
           } else {
             await bot.sendMessage(chatId, "Товар не найден.");
