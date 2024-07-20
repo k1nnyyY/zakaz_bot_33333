@@ -165,6 +165,7 @@ await mongoose
 
     function checkGuidePassword(password: string, guide: string): boolean {
       const filePath = getPasswordFilePathForGuide(guide);
+      console.log(`Checking guide password for guide: ${guide}, file path: ${filePath}`);
       if (!fs.existsSync(filePath)) return false;
       const storedPassword = fs.readFileSync(filePath, "utf-8").trim();
       return storedPassword === password.trim();
@@ -172,6 +173,7 @@ await mongoose
 
     function checkLessonPassword(password: string, lessonNumber: number): boolean {
       const filePath = getPasswordFilePathForLesson(lessonNumber);
+      console.log(`Checking lesson password for lesson number: ${lessonNumber}, file path: ${filePath}`);
       if (!fs.existsSync(filePath)) return false;
       const storedPassword = fs.readFileSync(filePath, "utf-8").trim();
       return storedPassword === password.trim();
