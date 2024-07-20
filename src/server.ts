@@ -892,7 +892,8 @@ await mongoose
         } else if (isLesson) {
           // ### If the password is for a lesson
           const lessonNumber = parseInt(inputPassword.split(" ")[1]);
-          if (!isNaN(lessonNumber) && checkLessonPassword(inputPassword.split(" ")[2], lessonNumber)) {
+          const lessonPassword = inputPassword.split(" ")[2];
+          if (!isNaN(lessonNumber) && checkLessonPassword(lessonPassword, lessonNumber)) {
             const updatedUser = await User.findOneAndUpdate(
               { chatId },
               { authenticated: true, isAdmin: false, $addToSet: { lessonAccess: lessonNumber } },
@@ -916,6 +917,13 @@ await mongoose
                 },
               }
             );
+
+            const lesson = await Lesson.findOne({ lessonNumber });
+            if (lesson && lesson.videoUrl) {
+              await bot.sendMessage(chatId, `Смотреть видео урока: ${lesson.videoUrl}`);
+            } else {
+              await bot.sendMessage(chatId, "Ошибка: Урок не найден.");
+            }
 
             if (updatedUser) {
               updatedUser.messageIds.push(sentMessage.message_id);
